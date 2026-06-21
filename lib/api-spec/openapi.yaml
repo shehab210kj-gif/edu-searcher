@@ -10,6 +10,14 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: projects
+    description: Academic research projects
+  - name: ai
+    description: AI-powered operations
+  - name: templates
+    description: Formatting templates library
+  - name: stats
+    description: Dashboard statistics
 paths:
   /healthz:
     get:
@@ -24,7 +32,228 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List all projects
+      responses:
+        "200":
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProjectSummary"
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Create a project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{id}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Get a project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      summary: Update a project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteProject
+      tags: [projects]
+      summary: Delete a project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{id}/analyze:
+    post:
+      operationId: analyzeProject
+      tags: [ai]
+      summary: AI analysis - detect type, build structured sections
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Analyzed project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{id}/references:
+    post:
+      operationId: extractReferences
+      tags: [ai]
+      summary: Extract and format references per citation style
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Project with references
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{id}/verify:
+    post:
+      operationId: verifyProject
+      tags: [ai]
+      summary: Academic verification + readiness score
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Project with verification results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{id}/assist:
+    post:
+      operationId: assistProject
+      tags: [ai]
+      summary: AI academic assistant actions
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssistInput"
+      responses:
+        "200":
+          description: Assistant result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssistResult"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /templates:
+    get:
+      operationId: listTemplates
+      tags: [templates]
+      summary: List formatting templates
+      responses:
+        "200":
+          description: Templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Template"
+
+  /templates/{id}:
+    get:
+      operationId: getTemplate
+      tags: [templates]
+      summary: Get a template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /stats:
+    get:
+      operationId: getStats
+      tags: [stats]
+      summary: Dashboard statistics
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stats"
+
 components:
+  parameters:
+    ProjectId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+
+  responses:
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +263,240 @@ components:
       required:
         - status
 
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    Formatting:
+      type: object
+      properties:
+        fontFamily: { type: string }
+        fontSize: { type: number }
+        headingSize: { type: number }
+        subheadingSize: { type: number }
+        lineSpacing: { type: number }
+        pageSize: { type: string }
+        marginTop: { type: number }
+        marginBottom: { type: number }
+        marginLeft: { type: number }
+        marginRight: { type: number }
+        paragraphAlign: { type: string }
+        firstLineIndent: { type: number }
+      required:
+        - fontFamily
+        - fontSize
+        - headingSize
+        - subheadingSize
+        - lineSpacing
+        - pageSize
+        - marginTop
+        - marginBottom
+        - marginLeft
+        - marginRight
+        - paragraphAlign
+        - firstLineIndent
+
+    Section:
+      type: object
+      properties:
+        key: { type: string }
+        heading: { type: string }
+        content: { type: string }
+      required: [key, heading, content]
+
+    Reference:
+      type: object
+      properties:
+        id: { type: string }
+        raw: { type: string }
+        formatted: { type: string }
+        type: { type: string }
+        authors: { type: string }
+        year: { type: string }
+        title: { type: string }
+        source: { type: string }
+        inTextCitation: { type: string }
+      required: [id, formatted]
+
+    VerificationIssue:
+      type: object
+      properties:
+        type: { type: string }
+        severity: { type: string }
+        message: { type: string }
+        location: { type: ["string", "null"] }
+        suggestion: { type: ["string", "null"] }
+      required: [type, severity, message]
+
+    Verification:
+      type: object
+      properties:
+        readinessScore: { type: integer }
+        completeness: { type: integer }
+        citations: { type: integer }
+        indexing: { type: integer }
+        formatting: { type: integer }
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/VerificationIssue"
+      required: [readinessScore, completeness, citations, indexing, formatting, issues]
+
+    Analysis:
+      type: object
+      properties:
+        researchType: { type: string }
+        pageCount: { type: integer }
+        language: { type: string }
+        specialization: { type: string }
+        summary: { type: string }
+        detectedSections:
+          type: array
+          items: { type: string }
+      required: [researchType, pageCount, language, specialization, summary, detectedSections]
+
+    ProjectSummary:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        workType: { type: string }
+        citationStyle: { type: string }
+        language: { type: string }
+        readinessScore: { type: ["integer", "null"] }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+      required: [id, title, workType, citationStyle, language, createdAt, updatedAt]
+
+    Project:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        workType: { type: string }
+        citationStyle: { type: string }
+        language: { type: string }
+        templateId: { type: ["integer", "null"] }
+        rawContent: { type: string }
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/Section"
+        references:
+          type: array
+          items:
+            $ref: "#/components/schemas/Reference"
+        formatting:
+          $ref: "#/components/schemas/Formatting"
+        analysis:
+          oneOf:
+            - $ref: "#/components/schemas/Analysis"
+            - type: "null"
+        verification:
+          oneOf:
+            - $ref: "#/components/schemas/Verification"
+            - type: "null"
+        readinessScore: { type: ["integer", "null"] }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+      required:
+        - id
+        - title
+        - workType
+        - citationStyle
+        - language
+        - rawContent
+        - sections
+        - references
+        - formatting
+        - createdAt
+        - updatedAt
+
+    ProjectInput:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        workType: { type: string }
+        citationStyle: { type: string }
+        language: { type: string }
+        templateId: { type: ["integer", "null"] }
+        rawContent: { type: string }
+      required: [title, workType, citationStyle, language]
+
+    ProjectUpdate:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        workType: { type: string }
+        citationStyle: { type: string }
+        language: { type: string }
+        templateId: { type: ["integer", "null"] }
+        rawContent: { type: string }
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/Section"
+        references:
+          type: array
+          items:
+            $ref: "#/components/schemas/Reference"
+        formatting:
+          $ref: "#/components/schemas/Formatting"
+
+    AssistInput:
+      type: object
+      properties:
+        action: { type: string }
+        instructions: { type: string }
+        context: { type: string }
+      required: [action]
+
+    AssistResult:
+      type: object
+      properties:
+        result: { type: string }
+        suggestions:
+          type: array
+          items: { type: string }
+      required: [result]
+
+    Template:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        category: { type: string }
+        description: { type: string }
+        citationStyle: { type: string }
+        isBuiltin: { type: boolean }
+        formatting:
+          $ref: "#/components/schemas/Formatting"
+        createdAt: { type: string }
+      required: [id, name, category, citationStyle, isBuiltin, formatting, createdAt]
+
+    Stats:
+      type: object
+      properties:
+        totalProjects: { type: integer }
+        avgReadiness: { type: integer }
+        completedProjects: { type: integer }
+        byWorkType:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkTypeCount"
+        recentProjects:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectSummary"
+      required: [totalProjects, avgReadiness, completedProjects, byWorkType, recentProjects]
+
+    WorkTypeCount:
+      type: object
+      properties:
+        workType: { type: string }
+        count: { type: integer }
+      required: [workType, count]
