@@ -9,6 +9,11 @@ import {
   convertMillimetersToTwip,
 } from "docx";
 import type { Project, Formatting } from "@workspace/db";
+import {
+  buildFormattedDocument,
+  type FormattedBlock,
+  type InlineRun,
+} from "./format-pipeline";
 
 function alignment(value: string): (typeof AlignmentType)[keyof typeof AlignmentType] {
   switch (value) {
@@ -27,108 +32,154 @@ function cmToTwip(cm: number): number {
   return convertMillimetersToTwip(cm * 10);
 }
 
-export async function buildDocx(project: Project): Promise<Buffer> {
-  const f: Formatting = project.formatting;
-  const halfPt = (pt: number) => Math.round(pt * 2);
+const halfPt = (pt: number): number => Math.round(pt * 2);
+const line = (spacing: number): number => Math.round(spacing * 240);
 
-  const children: Paragraph[] = [];
-
-  children.push(
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      bidirectional: true,
-      spacing: { after: 480, line: Math.round(f.lineSpacing * 240) },
-      children: [
-        new TextRun({
-          text: project.title,
-          bold: true,
-          font: f.fontFamily,
-          size: halfPt(f.headingSize + 4),
-          rightToLeft: true,
-        }),
-      ],
-    }),
+function runs(items: InlineRun[], font: string, size: number): TextRun[] {
+  return items.map(
+    (r) =>
+      new TextRun({
+        text: r.text,
+        bold: r.bold,
+        italics: r.italic,
+        font,
+        size,
+        rightToLeft: true,
+      }),
   );
+}
 
-  for (const section of project.sections) {
-    children.push(
-      new Paragraph({
+function renderBlock(block: FormattedBlock, f: Formatting): Paragraph {
+  const font = f.fontFamily;
+
+  switch (block.style) {
+    case "Title":
+      return new Paragraph({
+        style: "Title",
+        bidirectional: true,
+        children: runs(block.runs, font, halfPt(f.headingSize)),
+      });
+
+    case "Heading1":
+      return new Paragraph({
         heading: HeadingLevel.HEADING_1,
         bidirectional: true,
-        alignment: AlignmentType.RIGHT,
-        spacing: { before: 360, after: 200, line: Math.round(f.lineSpacing * 240) },
-        children: [
-          new TextRun({
-            text: section.heading,
-            bold: true,
-            font: f.fontFamily,
-            size: halfPt(f.headingSize),
-            rightToLeft: true,
-          }),
-        ],
-      }),
-    );
+        children: runs(block.runs, font, halfPt(f.headingSize)),
+      });
 
-    const paragraphs = section.content.split(/\n+/).filter((p) => p.trim());
-    for (const para of paragraphs) {
-      children.push(
-        new Paragraph({
-          bidirectional: true,
-          alignment: alignment(f.paragraphAlign),
-          spacing: { after: 160, line: Math.round(f.lineSpacing * 240) },
-          indent: { firstLine: cmToTwip(f.firstLineIndent) },
-          children: [
-            new TextRun({
-              text: para.trim(),
-              font: f.fontFamily,
-              size: halfPt(f.fontSize),
-              rightToLeft: true,
-            }),
-          ],
-        }),
-      );
-    }
-  }
+    case "Heading2":
+      return new Paragraph({
+        heading: HeadingLevel.HEADING_2,
+        bidirectional: true,
+        children: runs(block.runs, font, halfPt(f.subheadingSize)),
+      });
 
-  if (project.references.length > 0) {
-    children.push(
-      new Paragraph({
+    case "ReferencesHeading":
+      return new Paragraph({
         heading: HeadingLevel.HEADING_1,
         bidirectional: true,
-        alignment: AlignmentType.RIGHT,
-        spacing: { before: 480, after: 200 },
-        children: [
-          new TextRun({
-            text: "قائمة المراجع",
-            bold: true,
-            font: f.fontFamily,
-            size: halfPt(f.headingSize),
-            rightToLeft: true,
-          }),
-        ],
-      }),
-    );
+        pageBreakBefore: true,
+        children: runs(block.runs, font, halfPt(f.headingSize)),
+      });
 
-    for (const ref of project.references) {
-      children.push(
-        new Paragraph({
-          bidirectional: true,
-          alignment: AlignmentType.RIGHT,
-          spacing: { after: 120, line: Math.round(f.lineSpacing * 240) },
-          children: [
-            new TextRun({
-              text: ref.formatted,
-              font: f.fontFamily,
-              size: halfPt(f.fontSize),
-              rightToLeft: true,
-            }),
-          ],
-        }),
-      );
-    }
+    case "Reference":
+      return new Paragraph({
+        style: "Reference",
+        bidirectional: true,
+        children: runs(block.runs, font, halfPt(f.fontSize)),
+      });
+
+    case "Body":
+    default:
+      return new Paragraph({
+        style: "Body",
+        bidirectional: true,
+        children: runs(block.runs, font, halfPt(f.fontSize)),
+      });
   }
+}
+
+export async function buildDocx(project: Project): Promise<Buffer> {
+  const formatted = buildFormattedDocument(project);
+  const f = formatted.formatting;
+
+  const children = formatted.blocks.map((block) => renderBlock(block, f));
 
   const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: { font: f.fontFamily, size: halfPt(f.fontSize), rightToLeft: true },
+          paragraph: { spacing: { line: line(f.lineSpacing) } },
+        },
+      },
+      paragraphStyles: [
+        {
+          id: "Title",
+          name: "Title",
+          basedOn: "Normal",
+          next: "Body",
+          quickFormat: true,
+          run: { bold: true, size: halfPt(f.headingSize), font: f.fontFamily, rightToLeft: true },
+          paragraph: {
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 480, line: line(f.lineSpacing) },
+          },
+        },
+        {
+          id: "Heading1",
+          name: "Heading 1",
+          basedOn: "Normal",
+          next: "Body",
+          quickFormat: true,
+          run: { bold: true, size: halfPt(f.headingSize), font: f.fontFamily, rightToLeft: true },
+          paragraph: {
+            alignment: AlignmentType.RIGHT,
+            outlineLevel: 0,
+            spacing: { before: 360, after: 200, line: line(f.lineSpacing) },
+          },
+        },
+        {
+          id: "Heading2",
+          name: "Heading 2",
+          basedOn: "Normal",
+          next: "Body",
+          quickFormat: true,
+          run: { bold: true, size: halfPt(f.subheadingSize), font: f.fontFamily, rightToLeft: true },
+          paragraph: {
+            alignment: AlignmentType.RIGHT,
+            outlineLevel: 1,
+            spacing: { before: 240, after: 160, line: line(f.lineSpacing) },
+          },
+        },
+        {
+          id: "Body",
+          name: "Body",
+          basedOn: "Normal",
+          next: "Body",
+          quickFormat: true,
+          run: { size: halfPt(f.fontSize), font: f.fontFamily, rightToLeft: true },
+          paragraph: {
+            alignment: alignment(f.paragraphAlign),
+            spacing: { after: 200, line: line(f.lineSpacing) },
+            indent: { firstLine: cmToTwip(f.firstLineIndent) },
+          },
+        },
+        {
+          id: "Reference",
+          name: "Reference",
+          basedOn: "Normal",
+          next: "Reference",
+          quickFormat: true,
+          run: { size: halfPt(f.fontSize), font: f.fontFamily, rightToLeft: true },
+          paragraph: {
+            alignment: AlignmentType.JUSTIFIED,
+            spacing: { after: 160, line: line(f.lineSpacing) },
+            indent: { start: cmToTwip(1.27), hanging: cmToTwip(1.27) },
+          },
+        },
+      ],
+    },
     sections: [
       {
         properties: {

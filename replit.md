@@ -23,11 +23,14 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- DB schema (source of truth): `lib/db/src/schema/` (`projects.ts`, `templates.ts`)
+- API contract: `lib/api-spec/openapi.yaml` (codegen → `@workspace/api-zod`, React Query hooks)
+- AI service: `artifacts/api-server/src/lib/gemini.ts` (client) + `ai.ts` (prompts)
+- DOCX export engine: `artifacts/api-server/src/lib/format-pipeline.ts` (normalize/clean AI JSON → typed blocks) + `export.ts` (render blocks with Word named styles)
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- DOCX export is a two-stage pipeline: `buildFormattedDocument()` turns raw AI section/reference JSON into cleaned, typed blocks (strips markdown fences/markers, splits paragraphs, detects sub-headings, builds APA 7 references with hanging indent), then `buildDocx()` renders those blocks using real Word named paragraph styles (Title, Heading 1/2, Body, Reference). Raw AI text is never written directly to the document.
 
 ## Product
 
