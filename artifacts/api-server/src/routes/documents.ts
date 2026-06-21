@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db, projectsTable } from "@workspace/db";
 import { parseDocument } from "../lib/documents";
 import { buildDocx } from "../lib/export";
+import { buildPdf } from "../lib/pdf";
 
 const router: IRouter = Router();
 
@@ -45,10 +46,11 @@ router.get("/projects/:id/export", async (req, res): Promise<void> => {
     return;
   }
 
-  const format = Array.isArray(req.query.format)
+  const rawFormat = Array.isArray(req.query.format)
     ? req.query.format[0]
     : req.query.format;
-  if (format && format !== "docx") {
+  const format = rawFormat || "docx";
+  if (format !== "docx" && format !== "pdf") {
     res.status(400).json({ error: "صيغة التصدير غير مدعومة" });
     return;
   }
@@ -63,18 +65,37 @@ router.get("/projects/:id/export", async (req, res): Promise<void> => {
     return;
   }
 
-  const buffer = await buildDocx(project);
-  const filename = encodeURIComponent(`${project.title || "research"}.docx`);
+  const base = project.title || "research";
 
-  res.setHeader(
-    "Content-Type",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  );
-  res.setHeader(
-    "Content-Disposition",
-    `attachment; filename="${filename}"; filename*=UTF-8''${filename}`,
-  );
-  res.send(buffer);
+  try {
+    if (format === "pdf") {
+      const buffer = await buildPdf(project);
+      const filename = encodeURIComponent(`${base}.pdf`);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"; filename*=UTF-8''${filename}`,
+      );
+      res.send(buffer);
+      return;
+    }
+
+    const buffer = await buildDocx(project);
+    const filename = encodeURIComponent(`${base}.docx`);
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${filename}"; filename*=UTF-8''${filename}`,
+    );
+    res.send(buffer);
+  } catch (err) {
+    req.log.error({ err, format }, "Failed to export project document");
+    res.status(500).json({ error: "تعذّر إنشاء ملف التصدير" });
+  }
 });
 
 export default router;

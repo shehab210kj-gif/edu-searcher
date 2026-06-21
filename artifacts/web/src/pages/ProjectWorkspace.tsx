@@ -122,8 +122,8 @@ export function ProjectWorkspace() {
     window.location.href = `${import.meta.env.BASE_URL}api/projects/${id}/export?format=docx`;
   };
 
-  const printPdf = () => {
-    window.print();
+  const exportPdf = () => {
+    window.location.href = `${import.meta.env.BASE_URL}api/projects/${id}/export?format=pdf`;
   };
 
   if (isLoading) return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
@@ -157,9 +157,9 @@ export function ProjectWorkspace() {
             <Download className="w-4 h-4" />
             تصدير DOCX
           </Button>
-          <Button variant="outline" size="sm" onClick={printPdf} className="gap-2">
+          <Button variant="outline" size="sm" onClick={exportPdf} className="gap-2">
             <Printer className="w-4 h-4" />
-            طباعة PDF
+            تصدير PDF
           </Button>
         </div>
       </div>

@@ -27,6 +27,7 @@ _Replace the heading above with the project's name, and this line with one sente
 - API contract: `lib/api-spec/openapi.yaml` (codegen → `@workspace/api-zod`, React Query hooks)
 - AI service: `artifacts/api-server/src/lib/gemini.ts` (client) + `ai.ts` (prompts)
 - DOCX export engine: `artifacts/api-server/src/lib/format-pipeline.ts` (normalize/clean AI JSON → typed blocks) + `export.ts` (render blocks with Word named styles)
+- PDF export engine: `artifacts/api-server/src/lib/pdf.ts` — reuses the same `buildFormattedDocument()` blocks, renders HTML/CSS mirroring the DOCX named styles, and prints via headless Chromium (`puppeteer-core`). Amiri Arabic font is bundled in `assets/fonts/` and inlined as base64 `@font-face` (esbuild `base64` loader) so Arabic shaping/RTL never depend on system fonts. Chromium is resolved from PATH; override with `PUPPETEER_EXECUTABLE_PATH`. Export route: `GET /api/projects/:id/export?format=docx|pdf`.
 
 ## Architecture decisions
 
