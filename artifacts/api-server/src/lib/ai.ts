@@ -1,4 +1,4 @@
-import { chatJSON, chatText } from "./openai";
+import { chatJSON, chatText } from "./gemini";
 import type {
   Analysis,
   Section,

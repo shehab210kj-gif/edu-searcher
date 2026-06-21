@@ -4,6 +4,7 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Run & Operate
 
+- AI provider: Google Gemini (`@google/genai`). Requires `GEMINI_API_KEY`. Default model `gemini-2.5-flash` (override with `GEMINI_MODEL`). Client + `chatJSON`/`chatText` helpers live in `artifacts/api-server/src/lib/gemini.ts`.
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages

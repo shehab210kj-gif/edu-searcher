@@ -1,0 +1,1 @@
+- [AI provider](ai-provider.md) — project uses Gemini directly (`@google/genai`, `GEMINI_API_KEY`); `AQ.`-prefixed keys are Replit gateway tokens, not direct vendor keys.
