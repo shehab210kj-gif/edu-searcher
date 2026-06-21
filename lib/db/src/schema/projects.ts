@@ -12,6 +12,7 @@ import { z } from "zod/v4";
 export type Section = {
   key: string;
   heading: string;
+  level?: 1 | 2;
   content: string;
 };
 

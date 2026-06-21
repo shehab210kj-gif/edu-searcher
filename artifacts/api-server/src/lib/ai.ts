@@ -1,4 +1,6 @@
-import { chatJSON, chatText } from "./gemini";
+import { z } from "zod/v4";
+import { Type, type Schema } from "@google/genai";
+import { chatStructured } from "./gemini";
 import type {
   Analysis,
   Section,
@@ -11,10 +13,84 @@ function truncate(text: string, max = 16000): string {
   return text.length > max ? text.slice(0, max) : text;
 }
 
+function slugKey(heading: string, index: number): string {
+  const base = heading
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return base ? `${base}-${index + 1}` : `section-${index + 1}`;
+}
+
+// ---------------------------------------------------------------------------
+// Analyze & structure
+// ---------------------------------------------------------------------------
+
+const analysisZod = z.object({
+  researchType: z.string(),
+  pageCount: z.number().int().nonnegative(),
+  language: z.string(),
+  specialization: z.string(),
+  summary: z.string(),
+  detectedSections: z.array(z.string()),
+});
+
+const analyzeResponseZod = z.object({
+  analysis: analysisZod,
+  sections: z
+    .array(
+      z.object({
+        heading: z.string().min(1),
+        level: z.union([z.literal(1), z.literal(2)]),
+        content: z.string(),
+      }),
+    )
+    .min(1),
+});
+
+const analyzeResponseSchema: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    analysis: {
+      type: Type.OBJECT,
+      properties: {
+        researchType: { type: Type.STRING },
+        pageCount: { type: Type.INTEGER },
+        language: { type: Type.STRING },
+        specialization: { type: Type.STRING },
+        summary: { type: Type.STRING },
+        detectedSections: { type: Type.ARRAY, items: { type: Type.STRING } },
+      },
+      required: [
+        "researchType",
+        "pageCount",
+        "language",
+        "specialization",
+        "summary",
+        "detectedSections",
+      ],
+    },
+    sections: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          heading: { type: Type.STRING },
+          level: { type: Type.INTEGER },
+          content: { type: Type.STRING },
+        },
+        required: ["heading", "level", "content"],
+      },
+    },
+  },
+  required: ["analysis", "sections"],
+};
+
 export async function analyzeContent(
   project: Project,
 ): Promise<{ analysis: Analysis; sections: Section[] }> {
-  const system = `أنت محرر أكاديمي خبير متخصص في تنسيق وهيكلة الأبحاث العلمية باللغة العربية. مهمتك تحليل نص بحثي وتحديد نوعه وبنيته وتقسيمه إلى أقسام منظمة. أعد النتيجة بصيغة JSON فقط.`;
+  const system = `أنت محرر أكاديمي خبير متخصص في تنسيق وهيكلة الأبحاث العلمية باللغة العربية. مهمتك تحليل نص بحثي وتحديد نوعه وبنيته وتقسيمه إلى أقسام منظمة.`;
 
   const user = `حلّل البحث التالي.
 العنوان: ${project.title}
@@ -27,30 +103,70 @@ export async function analyzeContent(
 ${truncate(project.rawContent)}
 """
 
-أعد كائن JSON بالشكل التالي بالضبط:
-{
-  "analysis": {
-    "researchType": "نوع البحث المكتشف",
-    "pageCount": عدد الصفحات التقريبي (رقم صحيح),
-    "language": "لغة البحث",
-    "specialization": "التخصص العلمي",
-    "summary": "ملخص موجز للبحث في 2-3 جمل",
-    "detectedSections": ["عناوين الأقسام المكتشفة"]
+أعد كائن JSON بالحقول التالية:
+- analysis: { researchType, pageCount (عدد صحيح), language, specialization, summary (2-3 جمل), detectedSections (مصفوفة نصية) }
+- sections: مصفوفة من { heading (عنوان القسم بالعربية), level (1 للقسم الرئيسي أو 2 للقسم الفرعي), content (محتوى القسم منسقاً ومحرراً) }
+
+قسّم النص إلى أقسام أكاديمية منطقية (مثل: المقدمة، مشكلة الدراسة، الأهداف، الإطار النظري، الدراسات السابقة، المنهجية، النتائج، المناقشة، الخاتمة، التوصيات). استخدم level=2 للأقسام الفرعية داخل قسم رئيسي. حسّن صياغة المحتوى أكاديمياً مع الحفاظ على المعنى الأصلي.`;
+
+  const data = await chatStructured(system, user, analyzeResponseZod, {
+    responseSchema: analyzeResponseSchema,
+    temperature: 0.3,
+  });
+
+  const sections: Section[] = data.sections.map((s, i) => ({
+    key: slugKey(s.heading, i),
+    heading: s.heading,
+    level: s.level,
+    content: s.content,
+  }));
+
+  return { analysis: data.analysis, sections };
+}
+
+// ---------------------------------------------------------------------------
+// References
+// ---------------------------------------------------------------------------
+
+const referencesResponseZod = z.object({
+  references: z.array(
+    z.object({
+      author: z.string(),
+      year: z.string(),
+      title: z.string(),
+      source: z.string(),
+      type: z.string().optional(),
+      inTextCitation: z.string().optional(),
+    }),
+  ),
+});
+
+const referencesResponseSchema: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    references: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          author: { type: Type.STRING },
+          year: { type: Type.STRING },
+          title: { type: Type.STRING },
+          source: { type: Type.STRING },
+          type: { type: Type.STRING },
+          inTextCitation: { type: Type.STRING },
+        },
+        required: ["author", "year", "title", "source"],
+      },
+    },
   },
-  "sections": [
-    { "key": "معرف_فريد_بالإنجليزية", "heading": "عنوان القسم بالعربية", "content": "محتوى القسم منسقاً ومحرراً" }
-  ]
-}
-
-قسّم النص إلى أقسام أكاديمية منطقية (مثل: المقدمة، مشكلة الدراسة، الأهداف، الإطار النظري، الدراسات السابقة، المنهجية، النتائج، المناقشة، الخاتمة، التوصيات). حسّن صياغة المحتوى أكاديمياً مع الحفاظ على المعنى الأصلي.`;
-
-  return chatJSON<{ analysis: Analysis; sections: Section[] }>(system, user);
-}
+  required: ["references"],
+};
 
 export async function extractReferences(
   project: Project,
 ): Promise<Reference[]> {
-  const system = `أنت متخصص في التوثيق الأكاديمي وإدارة المراجع. مهمتك استخراج المراجع من نص بحثي وتنسيقها وفق النمط المطلوب. أعد النتيجة بصيغة JSON فقط.`;
+  const system = `أنت متخصص في التوثيق الأكاديمي وإدارة المراجع. مهمتك استخراج المراجع من نص بحثي وتنسيقها وفق النمط المطلوب.`;
 
   const sectionsText = project.sections
     .map((s) => `${s.heading}\n${s.content}`)
@@ -64,33 +180,102 @@ export async function extractReferences(
 ${truncate(sourceText)}
 """
 
-أعد كائن JSON بالشكل التالي بالضبط:
-{
-  "references": [
-    {
-      "id": "معرف_فريد",
-      "raw": "المرجع كما ورد في النص (إن وُجد)",
-      "formatted": "المرجع منسقاً بالكامل وفق نمط ${project.citationStyle}",
-      "type": "نوع المرجع (كتاب/مقال/رسالة/موقع)",
-      "authors": "المؤلفون",
-      "year": "سنة النشر",
-      "title": "العنوان",
-      "source": "المصدر أو دار النشر",
-      "inTextCitation": "صيغة الاستشهاد داخل النص"
-    }
-  ]
+أعد كائن JSON بالحقل references وهو مصفوفة من العناصر بالحقول التالية:
+- author: اسم المؤلف أو المؤلفين
+- year: سنة النشر
+- title: عنوان المرجع
+- source: المصدر أو دار النشر أو اسم المجلة
+- type: نوع المرجع (كتاب/مقال/رسالة/موقع)
+- inTextCitation: صيغة الاستشهاد داخل النص
+
+إذا لم تجد مراجع صريحة، أعد مصفوفة references فارغة. رتّب المراجع وفق قواعد نمط ${project.citationStyle}.`;
+
+  const data = await chatStructured(system, user, referencesResponseZod, {
+    responseSchema: referencesResponseSchema,
+    temperature: 0.3,
+  });
+
+  return data.references.map((r, i) => {
+    const formatted = `${r.author} (${r.year}). ${r.title}. ${r.source}.`
+      .replace(/\s+/g, " ")
+      .trim();
+    return {
+      id: `ref-${i + 1}`,
+      authors: r.author,
+      year: r.year,
+      title: r.title,
+      source: r.source,
+      type: r.type,
+      inTextCitation: r.inTextCitation,
+      formatted,
+    } satisfies Reference;
+  });
 }
 
-إذا لم تجد مراجع صريحة، استنتج المراجع المحتملة من الإشارات داخل النص. رتّب المراجع أبجدياً وفق قواعد نمط ${project.citationStyle}.`;
+// ---------------------------------------------------------------------------
+// Verification
+// ---------------------------------------------------------------------------
 
-  const result = await chatJSON<{ references: Reference[] }>(system, user);
-  return result.references ?? [];
-}
+const verificationResponseZod = z.object({
+  verification: z.object({
+    readinessScore: z.number().int().min(0).max(100),
+    completeness: z.number().int().min(0).max(100),
+    citations: z.number().int().min(0).max(100),
+    indexing: z.number().int().min(0).max(100),
+    formatting: z.number().int().min(0).max(100),
+    issues: z.array(
+      z.object({
+        type: z.string(),
+        severity: z.string(),
+        message: z.string(),
+        location: z.string().nullable().optional(),
+        suggestion: z.string().nullable().optional(),
+      }),
+    ),
+  }),
+});
 
-export async function verifyProject(
-  project: Project,
-): Promise<Verification> {
-  const system = `أنت مدقق أكاديمي صارم متخصص في تقييم جاهزية الأبحاث العلمية للنشر. مهمتك تقييم البحث وإعطاء درجة جاهزية ورصد المشكلات. أعد النتيجة بصيغة JSON فقط.`;
+const verificationResponseSchema: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    verification: {
+      type: Type.OBJECT,
+      properties: {
+        readinessScore: { type: Type.INTEGER },
+        completeness: { type: Type.INTEGER },
+        citations: { type: Type.INTEGER },
+        indexing: { type: Type.INTEGER },
+        formatting: { type: Type.INTEGER },
+        issues: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              type: { type: Type.STRING },
+              severity: { type: Type.STRING },
+              message: { type: Type.STRING },
+              location: { type: Type.STRING, nullable: true },
+              suggestion: { type: Type.STRING, nullable: true },
+            },
+            required: ["type", "severity", "message"],
+          },
+        },
+      },
+      required: [
+        "readinessScore",
+        "completeness",
+        "citations",
+        "indexing",
+        "formatting",
+        "issues",
+      ],
+    },
+  },
+  required: ["verification"],
+};
+
+export async function verifyProject(project: Project): Promise<Verification> {
+  const system = `أنت مدقق أكاديمي صارم متخصص في تقييم جاهزية الأبحاث العلمية للنشر. مهمتك تقييم البحث وإعطاء درجة جاهزية ورصد المشكلات.`;
 
   const sectionsText = project.sections
     .map((s) => `[${s.heading}]\n${s.content}`)
@@ -114,31 +299,36 @@ ${truncate(sectionsText || project.rawContent, 12000)}
 ${truncate(refsText, 3000)}
 """
 
-أعد كائن JSON بالشكل التالي بالضبط (الدرجات من 0 إلى 100):
-{
-  "verification": {
-    "readinessScore": الدرجة الإجمالية للجاهزية,
-    "completeness": درجة اكتمال الأقسام,
-    "citations": درجة جودة التوثيق والمراجع,
-    "indexing": درجة الفهرسة والتنظيم,
-    "formatting": درجة التنسيق,
-    "issues": [
-      {
-        "type": "نوع المشكلة (اكتمال/توثيق/فهرسة/تنسيق/لغة)",
-        "severity": "high أو medium أو low",
-        "message": "وصف المشكلة بالعربية",
-        "location": "موضع المشكلة أو null",
-        "suggestion": "اقتراح للإصلاح أو null"
-      }
-    ]
-  }
-}
+أعد كائن JSON بالحقل verification (الدرجات من 0 إلى 100):
+{ readinessScore, completeness, citations, indexing, formatting, issues: [ { type (اكتمال/توثيق/فهرسة/تنسيق/لغة), severity (high|medium|low), message (بالعربية), location (أو null), suggestion (أو null) } ] }
 
 كن دقيقاً وعادلاً في التقييم. اذكر المشكلات الحقيقية فقط.`;
 
-  const result = await chatJSON<{ verification: Verification }>(system, user);
-  return result.verification;
+  const data = await chatStructured(system, user, verificationResponseZod, {
+    responseSchema: verificationResponseSchema,
+    temperature: 0.3,
+  });
+
+  return data.verification;
 }
+
+// ---------------------------------------------------------------------------
+// Assistant
+// ---------------------------------------------------------------------------
+
+const assistResponseZod = z.object({
+  result: z.string(),
+  suggestions: z.array(z.string()).optional(),
+});
+
+const assistResponseSchema: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    result: { type: Type.STRING },
+    suggestions: { type: Type.ARRAY, items: { type: Type.STRING } },
+  },
+  required: ["result"],
+};
 
 export async function assist(
   project: Project,
@@ -160,8 +350,10 @@ ${projectContext}
 ${instructions ? `تعليمات إضافية: ${instructions}` : ""}
 ${context ? `النص المحدد للعمل عليه:\n"""\n${truncate(context, 8000)}\n"""` : ""}
 
-نفّذ الإجراء المطلوب وقدّم نتيجة واضحة ومفيدة باللغة العربية.`;
+نفّذ الإجراء المطلوب وأعد كائن JSON بالحقل result (نص الإجابة بالعربية) وحقل اختياري suggestions (مصفوفة اقتراحات قصيرة).`;
 
-  const result = await chatText(system, user);
-  return { result };
+  return chatStructured(system, user, assistResponseZod, {
+    responseSchema: assistResponseSchema,
+    temperature: 0.4,
+  });
 }

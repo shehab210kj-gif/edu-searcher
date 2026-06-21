@@ -135,7 +135,8 @@ export function buildFormattedDocument(project: Project): FormattedDocument {
   for (const section of project.sections) {
     const heading = cleanInline(normalize(section.heading));
     if (heading) {
-      blocks.push({ style: "Heading1", runs: [{ text: heading, bold: true }] });
+      const style = section.level === 2 ? "Heading2" : "Heading1";
+      blocks.push({ style, runs: [{ text: heading, bold: true }] });
     }
 
     for (const block of splitBlocks(section.content)) {
