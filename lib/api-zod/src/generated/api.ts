@@ -864,6 +864,10 @@ export const GetLibraryFacetsResponse = zod.object({
   "languages": zod.array(zod.object({
   "value": zod.string(),
   "count": zod.number()
+})),
+  "tags": zod.array(zod.object({
+  "value": zod.string(),
+  "count": zod.number()
 }))
 })
 

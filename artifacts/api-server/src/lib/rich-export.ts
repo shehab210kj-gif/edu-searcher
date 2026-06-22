@@ -1,10 +1,22 @@
 import { execSync } from "node:child_process";
 import puppeteer from "puppeteer-core";
 import HTMLtoDOCX from "@turbodocx/html-to-docx";
-import type { Project, Formatting, LayoutMetadata } from "@workspace/db";
+import type { Formatting, LayoutMetadata } from "@workspace/db";
 import { downloadObjectToBuffer } from "./storage";
 import amiriRegular from "../../assets/fonts/Amiri-Regular.ttf";
 import amiriBold from "../../assets/fonts/Amiri-Bold.ttf";
+
+/**
+ * Minimal structural input the rich exporters need. Both full projects and
+ * library documents satisfy this shape, so either can be exported with the
+ * same layout-preserving pipeline.
+ */
+export interface RichExportInput {
+  title: string;
+  richContent: string | null;
+  layoutMetadata: LayoutMetadata | null;
+  formatting: Formatting;
+}
 
 function resolveChromium(): string {
   const fromEnv =
@@ -93,7 +105,9 @@ function coverHtml(layout: LayoutMetadata): string {
  * keeping cover page, headers/footers, page numbers, RTL direction, tables and
  * inline images. Images are embedded as base64 so the file is self-contained.
  */
-export async function buildDocxFromRich(project: Project): Promise<Buffer> {
+export async function buildDocxFromRich(
+  project: RichExportInput,
+): Promise<Buffer> {
   const layout: LayoutMetadata = project.layoutMetadata ?? {};
   const f: Formatting = project.formatting;
 
@@ -163,7 +177,9 @@ function printTemplate(
  * Chromium, reusing the bundled Amiri font for correct Arabic shaping/RTL.
  * Cover page, headers/footers and page numbers are preserved.
  */
-export async function buildPdfFromRich(project: Project): Promise<Buffer> {
+export async function buildPdfFromRich(
+  project: RichExportInput,
+): Promise<Buffer> {
   const layout: LayoutMetadata = project.layoutMetadata ?? {};
   const f: Formatting = project.formatting;
 

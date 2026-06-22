@@ -1083,6 +1083,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/FacetCount"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetCount"
       required:
         - documentTypes
         - categories
@@ -1090,6 +1094,7 @@ components:
         - departments
         - degreeLevels
         - languages
+        - tags
 
     LibraryCategory:
       type: object

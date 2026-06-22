@@ -14,4 +14,5 @@ export interface LibraryFacets {
   departments: FacetCount[];
   degreeLevels: FacetCount[];
   languages: FacetCount[];
+  tags: FacetCount[];
 }

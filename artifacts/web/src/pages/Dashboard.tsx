@@ -99,7 +99,7 @@ export function Dashboard() {
                         </div>
                       </div>
                       <div className="text-left shrink-0 mr-4">
-                        {project.readinessScore !== null ? (
+                        {project.readinessScore != null ? (
                           <div className={`text-lg font-bold ${project.readinessScore >= 80 ? 'text-green-600' : project.readinessScore >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
                             {project.readinessScore}%
                           </div>

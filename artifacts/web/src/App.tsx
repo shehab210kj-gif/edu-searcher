@@ -8,6 +8,8 @@ import { Dashboard } from "@/pages/Dashboard";
 import { NewProject } from "@/pages/NewProject";
 import { ProjectWorkspace } from "@/pages/ProjectWorkspace";
 import { Templates } from "@/pages/Templates";
+import { Library } from "@/pages/Library";
+import { LibraryDocumentDetail } from "@/pages/LibraryDocumentDetail";
 
 const queryClient = new QueryClient();
 
@@ -17,6 +19,8 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/projects/new" component={NewProject} />
       <Route path="/projects/:id" component={ProjectWorkspace} />
+      <Route path="/library" component={Library} />
+      <Route path="/library/:id" component={LibraryDocumentDetail} />
       <Route path="/templates" component={Templates} />
       <Route component={NotFound} />
     </Switch>

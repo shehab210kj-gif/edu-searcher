@@ -12,6 +12,7 @@ import {
   UseLibraryDocumentParams,
 } from "@workspace/api-zod";
 import { defaultFormatting } from "../lib/formatting";
+import { buildDocxFromRich, buildPdfFromRich } from "../lib/rich-export";
 import {
   serializeLibraryDocument,
   serializeLibraryDocumentSummary,
@@ -104,6 +105,18 @@ router.get("/library/facets", async (_req, res): Promise<void> => {
       .map((r) => ({ value: r.value, count: r.count }));
   }
 
+  const tagRows = await db
+    .select({
+      value: sql<string>`tag.value`,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(
+      sql`${libraryDocumentsTable}, jsonb_array_elements_text(${libraryDocumentsTable.tags}) AS tag(value)`,
+    )
+    .where(PUBLISHED)
+    .groupBy(sql`tag.value`)
+    .orderBy(desc(sql`count(*)`));
+
   res.json({
     documentTypes: await facet(libraryDocumentsTable.documentType),
     categories: await facet(libraryDocumentsTable.category),
@@ -111,6 +124,9 @@ router.get("/library/facets", async (_req, res): Promise<void> => {
     departments: await facet(libraryDocumentsTable.department),
     degreeLevels: await facet(libraryDocumentsTable.degreeLevel),
     languages: await facet(libraryDocumentsTable.language),
+    tags: tagRows
+      .filter((r) => r.value != null && r.value !== "")
+      .map((r) => ({ value: r.value, count: r.count })),
   });
 });
 
@@ -139,6 +155,69 @@ router.get("/library/:id", async (req, res): Promise<void> => {
     return;
   }
   res.json(serializeLibraryDocument(doc));
+});
+
+router.get("/library/:id/export", async (req, res): Promise<void> => {
+  const params = GetLibraryDocumentParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const rawFormat = Array.isArray(req.query.format)
+    ? req.query.format[0]
+    : req.query.format;
+  const format = rawFormat || "docx";
+  if (format !== "docx" && format !== "pdf") {
+    res.status(400).json({ error: "صيغة التصدير غير مدعومة" });
+    return;
+  }
+
+  const [doc] = await db
+    .select()
+    .from(libraryDocumentsTable)
+    .where(and(eq(libraryDocumentsTable.id, params.data.id), PUBLISHED));
+  if (!doc) {
+    res.status(404).json({ error: "المستند غير موجود" });
+    return;
+  }
+
+  const input = {
+    title: doc.title,
+    richContent: doc.richContent,
+    layoutMetadata: doc.layoutMetadata,
+    formatting: doc.formatting ?? defaultFormatting,
+  };
+  const base = doc.title || "document";
+
+  try {
+    if (format === "pdf") {
+      const buffer = await buildPdfFromRich(input);
+      const filename = encodeURIComponent(`${base}.pdf`);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"; filename*=UTF-8''${filename}`,
+      );
+      res.send(buffer);
+      return;
+    }
+
+    const buffer = await buildDocxFromRich(input);
+    const filename = encodeURIComponent(`${base}.docx`);
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${filename}"; filename*=UTF-8''${filename}`,
+    );
+    res.send(buffer);
+  } catch (err) {
+    req.log.error({ err, format }, "Failed to export library document");
+    res.status(500).json({ error: "تعذّر إنشاء ملف التصدير" });
+  }
 });
 
 router.post("/library/:id/use", async (req, res): Promise<void> => {

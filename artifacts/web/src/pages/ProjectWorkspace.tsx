@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
-import type { Project, Section } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { Project, Section } from "@workspace/api-client-react";
 
 export function ProjectWorkspace() {
   const params = useParams();
@@ -144,7 +144,7 @@ export function ProjectWorkspace() {
           <div className="flex items-center gap-3 mt-3">
             <Badge variant="secondary">{project.workType}</Badge>
             <Badge variant="outline">{project.citationStyle}</Badge>
-            {project.readinessScore !== null && (
+            {project.readinessScore != null && (
               <Badge variant={project.readinessScore >= 80 ? "default" : "destructive"}>
                 الجاهزية: {project.readinessScore}%
               </Badge>
