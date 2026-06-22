@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
+import DOMPurify from "dompurify";
 import {
   useGetLibraryDocument,
   useUseLibraryDocument,
@@ -57,7 +58,10 @@ function processRichContent(html: string): { html: string; headings: Heading[] }
     });
   });
 
-  return { html: doc.body.innerHTML, headings };
+  // Sanitize the admin-authored HTML before it is injected via
+  // dangerouslySetInnerHTML — this is a reader-facing route, so never trust
+  // stored content even though it originates from the admin tools.
+  return { html: DOMPurify.sanitize(doc.body.innerHTML), headings };
 }
 
 function CoverPage({ doc }: { doc: LibraryDocument }) {
