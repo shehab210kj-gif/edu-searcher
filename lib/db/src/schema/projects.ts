@@ -43,6 +43,20 @@ export type Formatting = {
   firstLineIndent: number;
 };
 
+/**
+ * A single editable text unit extracted from a TEMPLATE document's original
+ * DOCX. `id` is the paragraph's position among matched `<w:p>` elements in
+ * word/document.xml (index-stable so edits can be re-applied to the immutable
+ * clone). `original` is the text as imported; `text` is the user's current
+ * value. Only paragraphs whose `text` differs from `original` are written back,
+ * and only their `<w:t>` nodes are touched on export.
+ */
+export type TemplateParagraph = {
+  id: number;
+  original: string;
+  text: string;
+};
+
 export type Analysis = {
   researchType: string;
   pageCount: number;
@@ -119,6 +133,16 @@ export const projectsTable = pgTable("projects", {
   sourceLibraryDocumentId: integer("source_library_document_id"),
   richContent: text("rich_content"),
   layoutMetadata: jsonb("layout_metadata").$type<LayoutMetadata>(),
+  /**
+   * "AI_GENERATED" (default): the Gemini/rich-content pipeline.
+   * "TEMPLATE": preserves the original uploaded DOCX 100% — export clones the
+   * file and only swaps edited `<w:t>` text nodes.
+   */
+  documentMode: text("document_mode").notNull().default("AI_GENERATED"),
+  /** Object-storage path of the cloned original DOCX (TEMPLATE mode, internal). */
+  templateFileUrl: text("template_file_url"),
+  /** Editable text units for TEMPLATE mode. */
+  templateContent: jsonb("template_content").$type<TemplateParagraph[]>(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

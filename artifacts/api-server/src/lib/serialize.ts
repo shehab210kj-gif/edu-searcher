@@ -24,6 +24,8 @@ export function serializeProject(p: Project) {
     sourceLibraryDocumentId: p.sourceLibraryDocumentId ?? null,
     richContent: p.richContent ?? null,
     layoutMetadata: p.layoutMetadata ?? null,
+    documentMode: p.documentMode,
+    templateContent: p.templateContent ?? null,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   };

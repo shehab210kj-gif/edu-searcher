@@ -10,6 +10,7 @@ import type { Formatting } from './formatting';
 import type { LayoutMetadata } from './layoutMetadata';
 import type { Reference } from './reference';
 import type { Section } from './section';
+import type { TemplateParagraph } from './templateParagraph';
 import type { Verification } from './verification';
 
 export interface Project {
@@ -33,6 +34,9 @@ export interface Project {
   /** @nullable */
   richContent?: string | null;
   layoutMetadata?: LayoutMetadata | null;
+  documentMode: string;
+  /** @nullable */
+  templateContent?: TemplateParagraph[] | null;
   createdAt: string;
   updatedAt: string;
 }

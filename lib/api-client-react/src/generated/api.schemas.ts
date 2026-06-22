@@ -136,6 +136,12 @@ export interface LayoutMetadata {
   cover?: CoverFields;
 }
 
+export interface TemplateParagraph {
+  id: number;
+  original: string;
+  text: string;
+}
+
 export interface Project {
   id: number;
   title: string;
@@ -157,6 +163,9 @@ export interface Project {
   /** @nullable */
   richContent?: string | null;
   layoutMetadata?: LayoutMetadata | null;
+  documentMode: string;
+  /** @nullable */
+  templateContent?: TemplateParagraph[] | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -187,6 +196,8 @@ export interface ProjectUpdate {
   /** @nullable */
   richContent?: string | null;
   layoutMetadata?: LayoutMetadata | null;
+  /** @nullable */
+  templateContent?: TemplateParagraph[] | null;
 }
 
 export interface AssistInput {

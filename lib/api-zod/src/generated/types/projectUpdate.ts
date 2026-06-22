@@ -9,6 +9,7 @@ import type { Formatting } from './formatting';
 import type { LayoutMetadata } from './layoutMetadata';
 import type { Reference } from './reference';
 import type { Section } from './section';
+import type { TemplateParagraph } from './templateParagraph';
 
 export interface ProjectUpdate {
   /** @minLength 1 */
@@ -25,4 +26,6 @@ export interface ProjectUpdate {
   /** @nullable */
   richContent?: string | null;
   layoutMetadata?: LayoutMetadata | null;
+  /** @nullable */
+  templateContent?: TemplateParagraph[] | null;
 }

@@ -41,6 +41,7 @@ export * from './reference';
 export * from './section';
 export * from './stats';
 export * from './template';
+export * from './templateParagraph';
 export * from './unauthorizedResponse';
 export * from './uploadUrlRequest';
 export * from './uploadUrlResponse';

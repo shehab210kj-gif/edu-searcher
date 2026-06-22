@@ -28,6 +28,7 @@ import {
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import type { Project, Section } from "@workspace/api-client-react";
+import { TemplateWorkspace } from "./TemplateWorkspace";
 
 export function ProjectWorkspace() {
   const params = useParams();
@@ -128,6 +129,10 @@ export function ProjectWorkspace() {
 
   if (isLoading) return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   if (isError || !project) return <div className="p-8 text-center text-red-500 font-bold">المشروع غير موجود</div>;
+
+  if (project.documentMode === "TEMPLATE") {
+    return <TemplateWorkspace project={project} />;
+  }
 
   return (
     <div className="space-y-6 fade-in-up pb-20">

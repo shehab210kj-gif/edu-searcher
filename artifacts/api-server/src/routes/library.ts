@@ -13,12 +13,17 @@ import {
 } from "@workspace/api-zod";
 import { defaultFormatting } from "../lib/formatting";
 import { buildDocxFromRich, buildPdfFromRich } from "../lib/rich-export";
+import { downloadObjectToBuffer, uploadBuffer } from "../lib/storage";
+import { extractTemplateParagraphs } from "../lib/docx-template";
 import {
   serializeLibraryDocument,
   serializeLibraryDocumentSummary,
   serializeLibraryCategory,
   serializeProject,
 } from "../lib/serialize";
+
+const DOCX_MIME =
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 const router: IRouter = Router();
 
@@ -240,6 +245,46 @@ router.post("/library/:id/use", async (req, res): Promise<void> => {
     return;
   }
 
+  // TEMPLATE mode: when the original DOCX is preserved in storage, clone it so
+  // the project owns an immutable copy, and extract its editable text. Export
+  // later swaps only the edited text nodes — fonts, layout, RTL, headers,
+  // footers, images and tables are preserved exactly. If the original exists but
+  // cloning fails, surface the error instead of silently producing an AI-mode
+  // project, so fidelity failures stay visible.
+  if (doc.originalFileUrl) {
+    try {
+      const { buffer } = await downloadObjectToBuffer(doc.originalFileUrl);
+      const templateFileUrl = await uploadBuffer(buffer, DOCX_MIME);
+      const templateContent = await extractTemplateParagraphs(buffer);
+
+      const [project] = await db
+        .insert(projectsTable)
+        .values({
+          title: doc.title,
+          workType: doc.documentType,
+          citationStyle: "APA",
+          language: doc.language,
+          rawContent: "",
+          formatting: doc.formatting ?? defaultFormatting,
+          sourceLibraryDocumentId: doc.id,
+          documentMode: "TEMPLATE",
+          templateFileUrl,
+          templateContent,
+        })
+        .returning();
+
+      res.status(201).json(serializeProject(project));
+    } catch (err) {
+      req.log.error(
+        { err, libraryDocumentId: doc.id },
+        "Failed to prepare template DOCX",
+      );
+      res.status(500).json({ error: "تعذّر تجهيز القالب من المستند الأصلي" });
+    }
+    return;
+  }
+
+  // Legacy documents without a preserved original DOCX use the AI/rich pipeline.
   const [project] = await db
     .insert(projectsTable)
     .values({

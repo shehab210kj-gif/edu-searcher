@@ -147,6 +147,12 @@ export const GetProjectResponse = zod.object({
   "logoUrl": zod.string().optional()
 }).optional()
 }),zod.null()]).optional(),
+  "documentMode": zod.string(),
+  "templateContent": zod.array(zod.object({
+  "id": zod.number(),
+  "original": zod.string(),
+  "text": zod.string()
+})).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -227,7 +233,12 @@ export const UpdateProjectBody = zod.object({
   "year": zod.string().optional(),
   "logoUrl": zod.string().optional()
 }).optional()
-}),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "templateContent": zod.array(zod.object({
+  "id": zod.number(),
+  "original": zod.string(),
+  "text": zod.string()
+})).nullish()
 })
 
 export const UpdateProjectResponse = zod.object({
@@ -321,6 +332,12 @@ export const UpdateProjectResponse = zod.object({
   "logoUrl": zod.string().optional()
 }).optional()
 }),zod.null()]).optional(),
+  "documentMode": zod.string(),
+  "templateContent": zod.array(zod.object({
+  "id": zod.number(),
+  "original": zod.string(),
+  "text": zod.string()
+})).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -432,6 +449,12 @@ export const AnalyzeProjectResponse = zod.object({
   "logoUrl": zod.string().optional()
 }).optional()
 }),zod.null()]).optional(),
+  "documentMode": zod.string(),
+  "templateContent": zod.array(zod.object({
+  "id": zod.number(),
+  "original": zod.string(),
+  "text": zod.string()
+})).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -535,6 +558,12 @@ export const ExtractReferencesResponse = zod.object({
   "logoUrl": zod.string().optional()
 }).optional()
 }),zod.null()]).optional(),
+  "documentMode": zod.string(),
+  "templateContent": zod.array(zod.object({
+  "id": zod.number(),
+  "original": zod.string(),
+  "text": zod.string()
+})).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -638,6 +667,12 @@ export const VerifyProjectResponse = zod.object({
   "logoUrl": zod.string().optional()
 }).optional()
 }),zod.null()]).optional(),
+  "documentMode": zod.string(),
+  "templateContent": zod.array(zod.object({
+  "id": zod.number(),
+  "original": zod.string(),
+  "text": zod.string()
+})).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -1361,6 +1396,12 @@ export const RestoreProjectVersionResponse = zod.object({
   "logoUrl": zod.string().optional()
 }).optional()
 }),zod.null()]).optional(),
+  "documentMode": zod.string(),
+  "templateContent": zod.array(zod.object({
+  "id": zod.number(),
+  "original": zod.string(),
+  "text": zod.string()
+})).nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })

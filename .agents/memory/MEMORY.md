@@ -1,1 +1,2 @@
 - [Rich content rendering](rich-content-rendering.md) — library/project richContent is HTML rendered via dangerouslySetInnerHTML; always sanitize on render even though it's admin-authored.
+- [DOCX TEMPLATE mode](docx-template-mode.md) — TEMPLATE projects clone the original DOCX + regex-edit only `<w:t>` nodes + LibreOffice PDF; never mix with the AI engine; never use an XML reserializer.

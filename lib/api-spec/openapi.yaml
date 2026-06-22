@@ -780,6 +780,11 @@ components:
           oneOf:
             - $ref: "#/components/schemas/LayoutMetadata"
             - type: "null"
+        documentMode: { type: string }
+        templateContent:
+          type: ["array", "null"]
+          items:
+            $ref: "#/components/schemas/TemplateParagraph"
         createdAt: { type: string }
         updatedAt: { type: string }
       required:
@@ -792,6 +797,7 @@ components:
         - sections
         - references
         - formatting
+        - documentMode
         - createdAt
         - updatedAt
 
@@ -830,6 +836,18 @@ components:
           oneOf:
             - $ref: "#/components/schemas/LayoutMetadata"
             - type: "null"
+        templateContent:
+          type: ["array", "null"]
+          items:
+            $ref: "#/components/schemas/TemplateParagraph"
+
+    TemplateParagraph:
+      type: object
+      properties:
+        id: { type: integer }
+        original: { type: string }
+        text: { type: string }
+      required: [id, original, text]
 
     AssistInput:
       type: object
