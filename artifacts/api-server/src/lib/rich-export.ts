@@ -144,11 +144,18 @@ export async function buildDocxFromRich(project: Project): Promise<Buffer> {
   return Buffer.from(await (result as Blob).arrayBuffer());
 }
 
-function pageNumberFooter(layout: LayoutMetadata): string {
-  const align = layout.pageNumberAlign ?? "center";
-  return `<div style="width:100%;font-family:'Amiri',serif;font-size:9pt;text-align:${align};">
-    <span class="pageNumber"></span>
-  </div>`;
+/**
+ * Wrap header/footer markup for Puppeteer's print templates. These templates
+ * render in a separate document context (no page CSS/fonts), so every style
+ * must be inline and explicit, and side padding must mirror the page margins.
+ */
+function printTemplate(
+  inner: string,
+  align: string,
+  marginLeft: number,
+  marginRight: number,
+): string {
+  return `<div style="width:100%;font-size:9pt;direction:rtl;text-align:${align};padding:0 ${marginRight}cm 0 ${marginLeft}cm;-webkit-print-color-adjust:exact;">${inner}</div>`;
 }
 
 /**
@@ -205,13 +212,10 @@ export async function buildPdfFromRich(project: Project): Promise<Buffer> {
   table { width: 100%; border-collapse: collapse; }
   td, th { border: 1px solid #444; padding: 4pt 6pt; }
   .cover { break-after: page; page-break-after: always; }
-  header.doc-header, footer.doc-footer { font-size: 9pt; }
 </style>
 </head>
 <body>
-${layout.headerHtml ? `<header class="doc-header">${layout.headerHtml}</header>` : ""}
 ${content}
-${layout.footerHtml ? `<footer class="doc-footer">${layout.footerHtml}</footer>` : ""}
 </body>
 </html>`;
 
@@ -233,13 +237,27 @@ ${layout.footerHtml ? `<footer class="doc-footer">${layout.footerHtml}</footer>`
     await page.evaluateHandle("document.fonts.ready");
 
     const showPageNumbers = Boolean(layout.showPageNumbers);
+    const headerHtml = layout.headerHtml?.trim() ? layout.headerHtml : "";
+    const footerHtml = layout.footerHtml?.trim() ? layout.footerHtml : "";
+    const pageNumberAlign = layout.pageNumberAlign ?? "center";
+    const footerInner = showPageNumbers
+      ? `${footerHtml}<span class="pageNumber"></span>`
+      : footerHtml;
+    const displayHeaderFooter = Boolean(
+      headerHtml || footerHtml || showPageNumbers,
+    );
+
     const pdf = await page.pdf({
       format: ps?.size === "Letter" ? "letter" : "a4",
       landscape: ps?.orientation === "landscape",
       printBackground: true,
-      displayHeaderFooter: showPageNumbers,
-      headerTemplate: "<div></div>",
-      footerTemplate: showPageNumbers ? pageNumberFooter(layout) : "<div></div>",
+      displayHeaderFooter,
+      headerTemplate: headerHtml
+        ? printTemplate(headerHtml, "center", marginLeft, marginRight)
+        : "<div></div>",
+      footerTemplate: footerInner
+        ? printTemplate(footerInner, pageNumberAlign, marginLeft, marginRight)
+        : "<div></div>",
       margin: {
         top: `${marginTop}cm`,
         bottom: `${marginBottom}cm`,

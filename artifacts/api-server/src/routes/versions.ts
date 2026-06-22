@@ -25,6 +25,15 @@ router.get("/projects/:id/versions", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
+  const [project] = await db
+    .select({ id: projectsTable.id })
+    .from(projectsTable)
+    .where(eq(projectsTable.id, params.data.id));
+  if (!project) {
+    res.status(404).json({ error: "المشروع غير موجود" });
+    return;
+  }
+
   const rows = await db
     .select()
     .from(documentVersionsTable)

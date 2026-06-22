@@ -15,6 +15,7 @@ import {
   signAdminToken,
   requireAdmin,
   adminPasswordConfigured,
+  sessionSecretConfigured,
 } from "../lib/admin-auth";
 import { parseDocxToRich } from "../lib/documents";
 import { uploadBuffer } from "../lib/storage";
@@ -34,7 +35,7 @@ const DOCX_MIME =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 router.post("/admin/login", async (req, res): Promise<void> => {
-  if (!adminPasswordConfigured()) {
+  if (!adminPasswordConfigured() || !sessionSecretConfigured()) {
     res.status(503).json({ error: "لم يتم تكوين كلمة مرور المشرف" });
     return;
   }

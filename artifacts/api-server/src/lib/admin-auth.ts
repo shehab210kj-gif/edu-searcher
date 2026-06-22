@@ -11,6 +11,10 @@ function hmac(value: string): string {
   return crypto.createHmac("sha256", secret()).update(value).digest("hex");
 }
 
+export function sessionSecretConfigured(): boolean {
+  return Boolean(process.env.SESSION_SECRET);
+}
+
 export function adminPasswordConfigured(): boolean {
   return Boolean(process.env.ADMIN_PASSWORD);
 }
@@ -30,6 +34,7 @@ export function signAdminToken(): string {
 }
 
 export function verifyAdminToken(token: string): boolean {
+  if (!sessionSecretConfigured()) return false;
   try {
     const decoded = Buffer.from(token, "base64url").toString("utf8");
     const idx = decoded.lastIndexOf(".");
