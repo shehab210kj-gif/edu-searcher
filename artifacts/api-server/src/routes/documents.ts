@@ -5,6 +5,7 @@ import { db, projectsTable } from "@workspace/db";
 import { parseDocument } from "../lib/documents";
 import { buildDocx } from "../lib/export";
 import { buildPdf } from "../lib/pdf";
+import { buildDocxFromRich, buildPdfFromRich } from "../lib/rich-export";
 
 const router: IRouter = Router();
 
@@ -66,10 +67,13 @@ router.get("/projects/:id/export", async (req, res): Promise<void> => {
   }
 
   const base = project.title || "research";
+  const hasRich = Boolean(project.richContent && project.richContent.trim());
 
   try {
     if (format === "pdf") {
-      const buffer = await buildPdf(project);
+      const buffer = hasRich
+        ? await buildPdfFromRich(project)
+        : await buildPdf(project);
       const filename = encodeURIComponent(`${base}.pdf`);
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
@@ -80,7 +84,9 @@ router.get("/projects/:id/export", async (req, res): Promise<void> => {
       return;
     }
 
-    const buffer = await buildDocx(project);
+    const buffer = hasRich
+      ? await buildDocxFromRich(project)
+      : await buildDocx(project);
     const filename = encodeURIComponent(`${base}.docx`);
 
     res.setHeader(

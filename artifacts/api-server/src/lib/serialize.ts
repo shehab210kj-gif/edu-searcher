@@ -1,4 +1,10 @@
-import type { Project, Template } from "@workspace/db";
+import type {
+  Project,
+  Template,
+  LibraryDocument,
+  LibraryCategory,
+  DocumentVersion,
+} from "@workspace/db";
 
 export function serializeProject(p: Project) {
   return {
@@ -15,8 +21,73 @@ export function serializeProject(p: Project) {
     analysis: p.analysis ?? null,
     verification: p.verification ?? null,
     readinessScore: p.readinessScore,
+    sourceLibraryDocumentId: p.sourceLibraryDocumentId ?? null,
+    richContent: p.richContent ?? null,
+    layoutMetadata: p.layoutMetadata ?? null,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
+  };
+}
+
+export function serializeLibraryDocument(d: LibraryDocument) {
+  return {
+    id: d.id,
+    title: d.title,
+    description: d.description,
+    documentType: d.documentType,
+    coverImageUrl: d.coverImageUrl,
+    university: d.university,
+    degreeLevel: d.degreeLevel,
+    department: d.department,
+    category: d.category,
+    language: d.language,
+    tags: d.tags,
+    originalFileName: d.originalFileName,
+    originalFileUrl: d.originalFileUrl,
+    richContent: d.richContent,
+    layoutMetadata: d.layoutMetadata,
+    formatting: d.formatting ?? null,
+    status: d.status,
+    createdAt: d.createdAt.toISOString(),
+    updatedAt: d.updatedAt.toISOString(),
+  };
+}
+
+export function serializeLibraryDocumentSummary(d: LibraryDocument) {
+  return {
+    id: d.id,
+    title: d.title,
+    description: d.description,
+    documentType: d.documentType,
+    coverImageUrl: d.coverImageUrl,
+    university: d.university,
+    degreeLevel: d.degreeLevel,
+    department: d.department,
+    category: d.category,
+    language: d.language,
+    tags: d.tags,
+    status: d.status,
+    createdAt: d.createdAt.toISOString(),
+    updatedAt: d.updatedAt.toISOString(),
+  };
+}
+
+export function serializeLibraryCategory(c: LibraryCategory) {
+  return {
+    id: c.id,
+    kind: c.kind,
+    name: c.name,
+    createdAt: c.createdAt.toISOString(),
+  };
+}
+
+export function serializeDocumentVersion(v: DocumentVersion) {
+  return {
+    id: v.id,
+    projectId: v.projectId,
+    label: v.label,
+    snapshot: v.snapshot,
+    createdAt: v.createdAt.toISOString(),
   };
 }
 

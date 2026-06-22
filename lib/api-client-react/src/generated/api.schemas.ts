@@ -86,6 +86,56 @@ export interface ProjectSummary {
   updatedAt: string;
 }
 
+export type LayoutMetadataPageNumberAlign = typeof LayoutMetadataPageNumberAlign[keyof typeof LayoutMetadataPageNumberAlign];
+
+
+export const LayoutMetadataPageNumberAlign = {
+  left: 'left',
+  center: 'center',
+  right: 'right',
+} as const;
+
+export type PageSetupOrientation = typeof PageSetupOrientation[keyof typeof PageSetupOrientation];
+
+
+export const PageSetupOrientation = {
+  portrait: 'portrait',
+  landscape: 'landscape',
+} as const;
+
+export interface PageSetup {
+  size?: string;
+  orientation?: PageSetupOrientation;
+  marginTop?: number;
+  marginBottom?: number;
+  marginLeft?: number;
+  marginRight?: number;
+}
+
+export interface CoverFields {
+  title?: string;
+  subtitle?: string;
+  studentName?: string;
+  supervisor?: string;
+  university?: string;
+  faculty?: string;
+  department?: string;
+  degree?: string;
+  year?: string;
+  logoUrl?: string;
+}
+
+export interface LayoutMetadata {
+  coverPageHtml?: string;
+  headerHtml?: string;
+  footerHtml?: string;
+  showPageNumbers?: boolean;
+  pageNumberFormat?: string;
+  pageNumberAlign?: LayoutMetadataPageNumberAlign;
+  pageSetup?: PageSetup;
+  cover?: CoverFields;
+}
+
 export interface Project {
   id: number;
   title: string;
@@ -102,6 +152,11 @@ export interface Project {
   verification?: Verification | null;
   /** @nullable */
   readinessScore?: number | null;
+  /** @nullable */
+  sourceLibraryDocumentId?: number | null;
+  /** @nullable */
+  richContent?: string | null;
+  layoutMetadata?: LayoutMetadata | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -129,6 +184,9 @@ export interface ProjectUpdate {
   sections?: Section[];
   references?: Reference[];
   formatting?: Formatting;
+  /** @nullable */
+  richContent?: string | null;
+  layoutMetadata?: LayoutMetadata | null;
 }
 
 export interface AssistInput {
@@ -166,8 +224,187 @@ export interface Stats {
   recentProjects: ProjectSummary[];
 }
 
+export interface UploadUrlRequest {
+  /** @minLength 1 */
+  name: string;
+  /** @minimum 1 */
+  size: number;
+  /** @minLength 1 */
+  contentType: string;
+}
+
+export interface UploadUrlResponse {
+  uploadURL: string;
+  objectPath: string;
+  metadata?: UploadUrlRequest;
+}
+
+export interface ErrorEnvelope {
+  error: string;
+}
+
+export interface LibraryDocument {
+  id: number;
+  title: string;
+  description: string;
+  documentType: string;
+  /** @nullable */
+  coverImageUrl?: string | null;
+  /** @nullable */
+  university?: string | null;
+  /** @nullable */
+  degreeLevel?: string | null;
+  /** @nullable */
+  department?: string | null;
+  /** @nullable */
+  category?: string | null;
+  language: string;
+  tags: string[];
+  /** @nullable */
+  originalFileName?: string | null;
+  /** @nullable */
+  originalFileUrl?: string | null;
+  richContent: string;
+  layoutMetadata: LayoutMetadata;
+  formatting?: Formatting | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LibraryDocumentSummary {
+  id: number;
+  title: string;
+  description: string;
+  documentType: string;
+  /** @nullable */
+  coverImageUrl?: string | null;
+  /** @nullable */
+  university?: string | null;
+  /** @nullable */
+  degreeLevel?: string | null;
+  /** @nullable */
+  department?: string | null;
+  /** @nullable */
+  category?: string | null;
+  language: string;
+  tags: string[];
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LibraryListResponse {
+  items: LibraryDocumentSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface LibraryDocumentUpdate {
+  /** @minLength 1 */
+  title?: string;
+  description?: string;
+  documentType?: string;
+  /** @nullable */
+  coverImageUrl?: string | null;
+  /** @nullable */
+  university?: string | null;
+  /** @nullable */
+  degreeLevel?: string | null;
+  /** @nullable */
+  department?: string | null;
+  /** @nullable */
+  category?: string | null;
+  language?: string;
+  tags?: string[];
+  richContent?: string;
+  layoutMetadata?: LayoutMetadata;
+  status?: string;
+}
+
+export interface FacetCount {
+  value: string;
+  count: number;
+}
+
+export interface LibraryFacets {
+  documentTypes: FacetCount[];
+  categories: FacetCount[];
+  universities: FacetCount[];
+  departments: FacetCount[];
+  degreeLevels: FacetCount[];
+  languages: FacetCount[];
+}
+
+export interface LibraryCategory {
+  id: number;
+  kind: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface LibraryCategoryInput {
+  kind: string;
+  /** @minLength 1 */
+  name: string;
+}
+
+export interface AdminLogin {
+  /** @minLength 1 */
+  password: string;
+}
+
+export interface AdminSession {
+  token: string;
+}
+
+export interface DocumentSnapshot {
+  title?: string;
+  richContent?: string;
+  layoutMetadata?: LayoutMetadata;
+  formatting?: Formatting | null;
+}
+
+export interface DocumentVersion {
+  id: number;
+  projectId: number;
+  label: string;
+  snapshot: DocumentSnapshot;
+  createdAt: string;
+}
+
+export interface CreateVersionInput {
+  label?: string;
+}
+
 /**
  * Not found
  */
 export type NotFoundResponse = Error;
+
+/**
+ * Admin authentication required
+ */
+export type UnauthorizedResponse = Error;
+
+export type ListLibraryDocumentsParams = {
+search?: string;
+documentType?: string;
+category?: string;
+university?: string;
+degreeLevel?: string;
+department?: string;
+language?: string;
+tag?: string;
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: number;
+};
 

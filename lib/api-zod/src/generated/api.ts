@@ -117,6 +117,36 @@ export const GetProjectResponse = zod.object({
 }))
 }),zod.null()]).optional(),
   "readinessScore": zod.number().nullish(),
+  "sourceLibraryDocumentId": zod.number().nullish(),
+  "richContent": zod.string().nullish(),
+  "layoutMetadata": zod.union([zod.object({
+  "coverPageHtml": zod.string().optional(),
+  "headerHtml": zod.string().optional(),
+  "footerHtml": zod.string().optional(),
+  "showPageNumbers": zod.boolean().optional(),
+  "pageNumberFormat": zod.string().optional(),
+  "pageNumberAlign": zod.enum(['left', 'center', 'right']).optional(),
+  "pageSetup": zod.object({
+  "size": zod.string().optional(),
+  "orientation": zod.enum(['portrait', 'landscape']).optional(),
+  "marginTop": zod.number().optional(),
+  "marginBottom": zod.number().optional(),
+  "marginLeft": zod.number().optional(),
+  "marginRight": zod.number().optional()
+}).optional(),
+  "cover": zod.object({
+  "title": zod.string().optional(),
+  "subtitle": zod.string().optional(),
+  "studentName": zod.string().optional(),
+  "supervisor": zod.string().optional(),
+  "university": zod.string().optional(),
+  "faculty": zod.string().optional(),
+  "department": zod.string().optional(),
+  "degree": zod.string().optional(),
+  "year": zod.string().optional(),
+  "logoUrl": zod.string().optional()
+}).optional()
+}),zod.null()]).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -168,7 +198,36 @@ export const UpdateProjectBody = zod.object({
   "marginRight": zod.number(),
   "paragraphAlign": zod.string(),
   "firstLineIndent": zod.number()
+}).optional(),
+  "richContent": zod.string().nullish(),
+  "layoutMetadata": zod.union([zod.object({
+  "coverPageHtml": zod.string().optional(),
+  "headerHtml": zod.string().optional(),
+  "footerHtml": zod.string().optional(),
+  "showPageNumbers": zod.boolean().optional(),
+  "pageNumberFormat": zod.string().optional(),
+  "pageNumberAlign": zod.enum(['left', 'center', 'right']).optional(),
+  "pageSetup": zod.object({
+  "size": zod.string().optional(),
+  "orientation": zod.enum(['portrait', 'landscape']).optional(),
+  "marginTop": zod.number().optional(),
+  "marginBottom": zod.number().optional(),
+  "marginLeft": zod.number().optional(),
+  "marginRight": zod.number().optional()
+}).optional(),
+  "cover": zod.object({
+  "title": zod.string().optional(),
+  "subtitle": zod.string().optional(),
+  "studentName": zod.string().optional(),
+  "supervisor": zod.string().optional(),
+  "university": zod.string().optional(),
+  "faculty": zod.string().optional(),
+  "department": zod.string().optional(),
+  "degree": zod.string().optional(),
+  "year": zod.string().optional(),
+  "logoUrl": zod.string().optional()
 }).optional()
+}),zod.null()]).optional()
 })
 
 export const UpdateProjectResponse = zod.object({
@@ -232,6 +291,36 @@ export const UpdateProjectResponse = zod.object({
 }))
 }),zod.null()]).optional(),
   "readinessScore": zod.number().nullish(),
+  "sourceLibraryDocumentId": zod.number().nullish(),
+  "richContent": zod.string().nullish(),
+  "layoutMetadata": zod.union([zod.object({
+  "coverPageHtml": zod.string().optional(),
+  "headerHtml": zod.string().optional(),
+  "footerHtml": zod.string().optional(),
+  "showPageNumbers": zod.boolean().optional(),
+  "pageNumberFormat": zod.string().optional(),
+  "pageNumberAlign": zod.enum(['left', 'center', 'right']).optional(),
+  "pageSetup": zod.object({
+  "size": zod.string().optional(),
+  "orientation": zod.enum(['portrait', 'landscape']).optional(),
+  "marginTop": zod.number().optional(),
+  "marginBottom": zod.number().optional(),
+  "marginLeft": zod.number().optional(),
+  "marginRight": zod.number().optional()
+}).optional(),
+  "cover": zod.object({
+  "title": zod.string().optional(),
+  "subtitle": zod.string().optional(),
+  "studentName": zod.string().optional(),
+  "supervisor": zod.string().optional(),
+  "university": zod.string().optional(),
+  "faculty": zod.string().optional(),
+  "department": zod.string().optional(),
+  "degree": zod.string().optional(),
+  "year": zod.string().optional(),
+  "logoUrl": zod.string().optional()
+}).optional()
+}),zod.null()]).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -313,6 +402,36 @@ export const AnalyzeProjectResponse = zod.object({
 }))
 }),zod.null()]).optional(),
   "readinessScore": zod.number().nullish(),
+  "sourceLibraryDocumentId": zod.number().nullish(),
+  "richContent": zod.string().nullish(),
+  "layoutMetadata": zod.union([zod.object({
+  "coverPageHtml": zod.string().optional(),
+  "headerHtml": zod.string().optional(),
+  "footerHtml": zod.string().optional(),
+  "showPageNumbers": zod.boolean().optional(),
+  "pageNumberFormat": zod.string().optional(),
+  "pageNumberAlign": zod.enum(['left', 'center', 'right']).optional(),
+  "pageSetup": zod.object({
+  "size": zod.string().optional(),
+  "orientation": zod.enum(['portrait', 'landscape']).optional(),
+  "marginTop": zod.number().optional(),
+  "marginBottom": zod.number().optional(),
+  "marginLeft": zod.number().optional(),
+  "marginRight": zod.number().optional()
+}).optional(),
+  "cover": zod.object({
+  "title": zod.string().optional(),
+  "subtitle": zod.string().optional(),
+  "studentName": zod.string().optional(),
+  "supervisor": zod.string().optional(),
+  "university": zod.string().optional(),
+  "faculty": zod.string().optional(),
+  "department": zod.string().optional(),
+  "degree": zod.string().optional(),
+  "year": zod.string().optional(),
+  "logoUrl": zod.string().optional()
+}).optional()
+}),zod.null()]).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -386,6 +505,36 @@ export const ExtractReferencesResponse = zod.object({
 }))
 }),zod.null()]).optional(),
   "readinessScore": zod.number().nullish(),
+  "sourceLibraryDocumentId": zod.number().nullish(),
+  "richContent": zod.string().nullish(),
+  "layoutMetadata": zod.union([zod.object({
+  "coverPageHtml": zod.string().optional(),
+  "headerHtml": zod.string().optional(),
+  "footerHtml": zod.string().optional(),
+  "showPageNumbers": zod.boolean().optional(),
+  "pageNumberFormat": zod.string().optional(),
+  "pageNumberAlign": zod.enum(['left', 'center', 'right']).optional(),
+  "pageSetup": zod.object({
+  "size": zod.string().optional(),
+  "orientation": zod.enum(['portrait', 'landscape']).optional(),
+  "marginTop": zod.number().optional(),
+  "marginBottom": zod.number().optional(),
+  "marginLeft": zod.number().optional(),
+  "marginRight": zod.number().optional()
+}).optional(),
+  "cover": zod.object({
+  "title": zod.string().optional(),
+  "subtitle": zod.string().optional(),
+  "studentName": zod.string().optional(),
+  "supervisor": zod.string().optional(),
+  "university": zod.string().optional(),
+  "faculty": zod.string().optional(),
+  "department": zod.string().optional(),
+  "degree": zod.string().optional(),
+  "year": zod.string().optional(),
+  "logoUrl": zod.string().optional()
+}).optional()
+}),zod.null()]).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -459,6 +608,36 @@ export const VerifyProjectResponse = zod.object({
 }))
 }),zod.null()]).optional(),
   "readinessScore": zod.number().nullish(),
+  "sourceLibraryDocumentId": zod.number().nullish(),
+  "richContent": zod.string().nullish(),
+  "layoutMetadata": zod.union([zod.object({
+  "coverPageHtml": zod.string().optional(),
+  "headerHtml": zod.string().optional(),
+  "footerHtml": zod.string().optional(),
+  "showPageNumbers": zod.boolean().optional(),
+  "pageNumberFormat": zod.string().optional(),
+  "pageNumberAlign": zod.enum(['left', 'center', 'right']).optional(),
+  "pageSetup": zod.object({
+  "size": zod.string().optional(),
+  "orientation": zod.enum(['portrait', 'landscape']).optional(),
+  "marginTop": zod.number().optional(),
+  "marginBottom": zod.number().optional(),
+  "marginLeft": zod.number().optional(),
+  "marginRight": zod.number().optional()
+}).optional(),
+  "cover": zod.object({
+  "title": zod.string().optional(),
+  "subtitle": zod.string().optional(),
+  "studentName": zod.string().optional(),
+  "supervisor": zod.string().optional(),
+  "university": zod.string().optional(),
+  "faculty": zod.string().optional(),
+  "department": zod.string().optional(),
+  "degree": zod.string().optional(),
+  "year": zod.string().optional(),
+  "logoUrl": zod.string().optional()
+}).optional()
+}),zod.null()]).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -565,6 +744,621 @@ export const GetStatsResponse = zod.object({
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 }))
+})
+
+
+/**
+ * @summary Request a presigned URL for file upload
+ */
+
+
+
+
+
+export const RequestUploadUrlBody = zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().min(1),
+  "contentType": zod.string().min(1)
+})
+
+
+
+
+
+
+export const RequestUploadUrlResponse = zod.object({
+  "uploadURL": zod.string().url(),
+  "objectPath": zod.string(),
+  "metadata": zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().min(1),
+  "contentType": zod.string().min(1)
+}).optional()
+})
+
+
+/**
+ * @summary Serve a public asset from PUBLIC_OBJECT_SEARCH_PATHS
+ */
+export const GetPublicObjectParams = zod.object({
+  "filePath": zod.coerce.string()
+})
+
+
+/**
+ * @summary Serve an object entity from PRIVATE_OBJECT_DIR
+ */
+export const GetStorageObjectParams = zod.object({
+  "objectPath": zod.coerce.string()
+})
+
+
+/**
+ * @summary Browse the research library with filters
+ */
+
+export const listLibraryDocumentsQueryPageSizeMax = 100;
+
+
+
+export const ListLibraryDocumentsQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "documentType": zod.coerce.string().optional(),
+  "category": zod.coerce.string().optional(),
+  "university": zod.coerce.string().optional(),
+  "degreeLevel": zod.coerce.string().optional(),
+  "department": zod.coerce.string().optional(),
+  "language": zod.coerce.string().optional(),
+  "tag": zod.coerce.string().optional(),
+  "page": zod.coerce.number().min(1).optional(),
+  "pageSize": zod.coerce.number().min(1).max(listLibraryDocumentsQueryPageSizeMax).optional()
+})
+
+export const ListLibraryDocumentsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "documentType": zod.string(),
+  "coverImageUrl": zod.string().nullish(),
+  "university": zod.string().nullish(),
+  "degreeLevel": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "language": zod.string(),
+  "tags": zod.array(zod.string()),
+  "status": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "total": zod.number(),
+  "page": zod.number(),
+  "pageSize": zod.number()
+})
+
+
+/**
+ * @summary Distinct filter values with counts
+ */
+export const GetLibraryFacetsResponse = zod.object({
+  "documentTypes": zod.array(zod.object({
+  "value": zod.string(),
+  "count": zod.number()
+})),
+  "categories": zod.array(zod.object({
+  "value": zod.string(),
+  "count": zod.number()
+})),
+  "universities": zod.array(zod.object({
+  "value": zod.string(),
+  "count": zod.number()
+})),
+  "departments": zod.array(zod.object({
+  "value": zod.string(),
+  "count": zod.number()
+})),
+  "degreeLevels": zod.array(zod.object({
+  "value": zod.string(),
+  "count": zod.number()
+})),
+  "languages": zod.array(zod.object({
+  "value": zod.string(),
+  "count": zod.number()
+}))
+})
+
+
+/**
+ * @summary Admin-managed taxonomy for filters
+ */
+export const ListLibraryCategoriesResponseItem = zod.object({
+  "id": zod.number(),
+  "kind": zod.string(),
+  "name": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListLibraryCategoriesResponse = zod.array(ListLibraryCategoriesResponseItem)
+
+
+/**
+ * @summary Get a full library document (with rich content) for preview
+ */
+export const GetLibraryDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetLibraryDocumentResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "documentType": zod.string(),
+  "coverImageUrl": zod.string().nullish(),
+  "university": zod.string().nullish(),
+  "degreeLevel": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "language": zod.string(),
+  "tags": zod.array(zod.string()),
+  "originalFileName": zod.string().nullish(),
+  "originalFileUrl": zod.string().nullish(),
+  "richContent": zod.string(),
+  "layoutMetadata": zod.object({
+  "coverPageHtml": zod.string().optional(),
+  "headerHtml": zod.string().optional(),
+  "footerHtml": zod.string().optional(),
+  "showPageNumbers": zod.boolean().optional(),
+  "pageNumberFormat": zod.string().optional(),
+  "pageNumberAlign": zod.enum(['left', 'center', 'right']).optional(),
+  "pageSetup": zod.object({
+  "size": zod.string().optional(),
+  "orientation": zod.enum(['portrait', 'landscape']).optional(),
+  "marginTop": zod.number().optional(),
+  "marginBottom": zod.number().optional(),
+  "marginLeft": zod.number().optional(),
+  "marginRight": zod.number().optional()
+}).optional(),
+  "cover": zod.object({
+  "title": zod.string().optional(),
+  "subtitle": zod.string().optional(),
+  "studentName": zod.string().optional(),
+  "supervisor": zod.string().optional(),
+  "university": zod.string().optional(),
+  "faculty": zod.string().optional(),
+  "department": zod.string().optional(),
+  "degree": zod.string().optional(),
+  "year": zod.string().optional(),
+  "logoUrl": zod.string().optional()
+}).optional()
+}),
+  "formatting": zod.union([zod.object({
+  "fontFamily": zod.string(),
+  "fontSize": zod.number(),
+  "headingSize": zod.number(),
+  "subheadingSize": zod.number(),
+  "lineSpacing": zod.number(),
+  "pageSize": zod.string(),
+  "marginTop": zod.number(),
+  "marginBottom": zod.number(),
+  "marginLeft": zod.number(),
+  "marginRight": zod.number(),
+  "paragraphAlign": zod.string(),
+  "firstLineIndent": zod.number()
+}),zod.null()]).optional(),
+  "status": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Duplicate a library document into a private editable project copy
+ */
+export const UseLibraryDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Validate the admin password and return a session token
+ */
+
+
+
+export const AdminLoginBody = zod.object({
+  "password": zod.string().min(1)
+})
+
+export const AdminLoginResponse = zod.object({
+  "token": zod.string()
+})
+
+
+/**
+ * @summary List all library documents (including drafts) for administration
+ */
+export const ListAdminLibraryResponseItem = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "documentType": zod.string(),
+  "coverImageUrl": zod.string().nullish(),
+  "university": zod.string().nullish(),
+  "degreeLevel": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "language": zod.string(),
+  "tags": zod.array(zod.string()),
+  "originalFileName": zod.string().nullish(),
+  "originalFileUrl": zod.string().nullish(),
+  "richContent": zod.string(),
+  "layoutMetadata": zod.object({
+  "coverPageHtml": zod.string().optional(),
+  "headerHtml": zod.string().optional(),
+  "footerHtml": zod.string().optional(),
+  "showPageNumbers": zod.boolean().optional(),
+  "pageNumberFormat": zod.string().optional(),
+  "pageNumberAlign": zod.enum(['left', 'center', 'right']).optional(),
+  "pageSetup": zod.object({
+  "size": zod.string().optional(),
+  "orientation": zod.enum(['portrait', 'landscape']).optional(),
+  "marginTop": zod.number().optional(),
+  "marginBottom": zod.number().optional(),
+  "marginLeft": zod.number().optional(),
+  "marginRight": zod.number().optional()
+}).optional(),
+  "cover": zod.object({
+  "title": zod.string().optional(),
+  "subtitle": zod.string().optional(),
+  "studentName": zod.string().optional(),
+  "supervisor": zod.string().optional(),
+  "university": zod.string().optional(),
+  "faculty": zod.string().optional(),
+  "department": zod.string().optional(),
+  "degree": zod.string().optional(),
+  "year": zod.string().optional(),
+  "logoUrl": zod.string().optional()
+}).optional()
+}),
+  "formatting": zod.union([zod.object({
+  "fontFamily": zod.string(),
+  "fontSize": zod.number(),
+  "headingSize": zod.number(),
+  "subheadingSize": zod.number(),
+  "lineSpacing": zod.number(),
+  "pageSize": zod.string(),
+  "marginTop": zod.number(),
+  "marginBottom": zod.number(),
+  "marginLeft": zod.number(),
+  "marginRight": zod.number(),
+  "paragraphAlign": zod.string(),
+  "firstLineIndent": zod.number()
+}),zod.null()]).optional(),
+  "status": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListAdminLibraryResponse = zod.array(ListAdminLibraryResponseItem)
+
+
+/**
+ * @summary Update library document metadata or content
+ */
+export const UpdateLibraryDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateLibraryDocumentBody = zod.object({
+  "title": zod.string().min(1).optional(),
+  "description": zod.string().optional(),
+  "documentType": zod.string().optional(),
+  "coverImageUrl": zod.string().nullish(),
+  "university": zod.string().nullish(),
+  "degreeLevel": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "language": zod.string().optional(),
+  "tags": zod.array(zod.string()).optional(),
+  "richContent": zod.string().optional(),
+  "layoutMetadata": zod.object({
+  "coverPageHtml": zod.string().optional(),
+  "headerHtml": zod.string().optional(),
+  "footerHtml": zod.string().optional(),
+  "showPageNumbers": zod.boolean().optional(),
+  "pageNumberFormat": zod.string().optional(),
+  "pageNumberAlign": zod.enum(['left', 'center', 'right']).optional(),
+  "pageSetup": zod.object({
+  "size": zod.string().optional(),
+  "orientation": zod.enum(['portrait', 'landscape']).optional(),
+  "marginTop": zod.number().optional(),
+  "marginBottom": zod.number().optional(),
+  "marginLeft": zod.number().optional(),
+  "marginRight": zod.number().optional()
+}).optional(),
+  "cover": zod.object({
+  "title": zod.string().optional(),
+  "subtitle": zod.string().optional(),
+  "studentName": zod.string().optional(),
+  "supervisor": zod.string().optional(),
+  "university": zod.string().optional(),
+  "faculty": zod.string().optional(),
+  "department": zod.string().optional(),
+  "degree": zod.string().optional(),
+  "year": zod.string().optional(),
+  "logoUrl": zod.string().optional()
+}).optional()
+}).optional(),
+  "status": zod.string().optional()
+})
+
+export const UpdateLibraryDocumentResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "documentType": zod.string(),
+  "coverImageUrl": zod.string().nullish(),
+  "university": zod.string().nullish(),
+  "degreeLevel": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "language": zod.string(),
+  "tags": zod.array(zod.string()),
+  "originalFileName": zod.string().nullish(),
+  "originalFileUrl": zod.string().nullish(),
+  "richContent": zod.string(),
+  "layoutMetadata": zod.object({
+  "coverPageHtml": zod.string().optional(),
+  "headerHtml": zod.string().optional(),
+  "footerHtml": zod.string().optional(),
+  "showPageNumbers": zod.boolean().optional(),
+  "pageNumberFormat": zod.string().optional(),
+  "pageNumberAlign": zod.enum(['left', 'center', 'right']).optional(),
+  "pageSetup": zod.object({
+  "size": zod.string().optional(),
+  "orientation": zod.enum(['portrait', 'landscape']).optional(),
+  "marginTop": zod.number().optional(),
+  "marginBottom": zod.number().optional(),
+  "marginLeft": zod.number().optional(),
+  "marginRight": zod.number().optional()
+}).optional(),
+  "cover": zod.object({
+  "title": zod.string().optional(),
+  "subtitle": zod.string().optional(),
+  "studentName": zod.string().optional(),
+  "supervisor": zod.string().optional(),
+  "university": zod.string().optional(),
+  "faculty": zod.string().optional(),
+  "department": zod.string().optional(),
+  "degree": zod.string().optional(),
+  "year": zod.string().optional(),
+  "logoUrl": zod.string().optional()
+}).optional()
+}),
+  "formatting": zod.union([zod.object({
+  "fontFamily": zod.string(),
+  "fontSize": zod.number(),
+  "headingSize": zod.number(),
+  "subheadingSize": zod.number(),
+  "lineSpacing": zod.number(),
+  "pageSize": zod.string(),
+  "marginTop": zod.number(),
+  "marginBottom": zod.number(),
+  "marginLeft": zod.number(),
+  "marginRight": zod.number(),
+  "paragraphAlign": zod.string(),
+  "firstLineIndent": zod.number()
+}),zod.null()]).optional(),
+  "status": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a library document
+ */
+export const DeleteLibraryDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Create a taxonomy entry
+ */
+
+
+
+export const CreateLibraryCategoryBody = zod.object({
+  "kind": zod.string(),
+  "name": zod.string().min(1)
+})
+
+
+/**
+ * @summary Delete a taxonomy entry
+ */
+export const DeleteLibraryCategoryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List version history for a project
+ */
+export const ListProjectVersionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListProjectVersionsResponseItem = zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "label": zod.string(),
+  "snapshot": zod.object({
+  "title": zod.string().optional(),
+  "richContent": zod.string().optional(),
+  "layoutMetadata": zod.object({
+  "coverPageHtml": zod.string().optional(),
+  "headerHtml": zod.string().optional(),
+  "footerHtml": zod.string().optional(),
+  "showPageNumbers": zod.boolean().optional(),
+  "pageNumberFormat": zod.string().optional(),
+  "pageNumberAlign": zod.enum(['left', 'center', 'right']).optional(),
+  "pageSetup": zod.object({
+  "size": zod.string().optional(),
+  "orientation": zod.enum(['portrait', 'landscape']).optional(),
+  "marginTop": zod.number().optional(),
+  "marginBottom": zod.number().optional(),
+  "marginLeft": zod.number().optional(),
+  "marginRight": zod.number().optional()
+}).optional(),
+  "cover": zod.object({
+  "title": zod.string().optional(),
+  "subtitle": zod.string().optional(),
+  "studentName": zod.string().optional(),
+  "supervisor": zod.string().optional(),
+  "university": zod.string().optional(),
+  "faculty": zod.string().optional(),
+  "department": zod.string().optional(),
+  "degree": zod.string().optional(),
+  "year": zod.string().optional(),
+  "logoUrl": zod.string().optional()
+}).optional()
+}).optional(),
+  "formatting": zod.union([zod.object({
+  "fontFamily": zod.string(),
+  "fontSize": zod.number(),
+  "headingSize": zod.number(),
+  "subheadingSize": zod.number(),
+  "lineSpacing": zod.number(),
+  "pageSize": zod.string(),
+  "marginTop": zod.number(),
+  "marginBottom": zod.number(),
+  "marginLeft": zod.number(),
+  "marginRight": zod.number(),
+  "paragraphAlign": zod.string(),
+  "firstLineIndent": zod.number()
+}),zod.null()]).optional()
+}),
+  "createdAt": zod.string()
+})
+export const ListProjectVersionsResponse = zod.array(ListProjectVersionsResponseItem)
+
+
+/**
+ * @summary Snapshot the current project state as a new version
+ */
+export const CreateProjectVersionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateProjectVersionBody = zod.object({
+  "label": zod.string().optional()
+})
+
+
+/**
+ * @summary Restore a project to a previous version snapshot
+ */
+export const RestoreProjectVersionParams = zod.object({
+  "id": zod.coerce.number(),
+  "versionId": zod.coerce.number()
+})
+
+export const RestoreProjectVersionResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "workType": zod.string(),
+  "citationStyle": zod.string(),
+  "language": zod.string(),
+  "templateId": zod.number().nullish(),
+  "rawContent": zod.string(),
+  "sections": zod.array(zod.object({
+  "key": zod.string(),
+  "heading": zod.string(),
+  "content": zod.string()
+})),
+  "references": zod.array(zod.object({
+  "id": zod.string(),
+  "raw": zod.string().optional(),
+  "formatted": zod.string(),
+  "type": zod.string().optional(),
+  "authors": zod.string().optional(),
+  "year": zod.string().optional(),
+  "title": zod.string().optional(),
+  "source": zod.string().optional(),
+  "inTextCitation": zod.string().optional()
+})),
+  "formatting": zod.object({
+  "fontFamily": zod.string(),
+  "fontSize": zod.number(),
+  "headingSize": zod.number(),
+  "subheadingSize": zod.number(),
+  "lineSpacing": zod.number(),
+  "pageSize": zod.string(),
+  "marginTop": zod.number(),
+  "marginBottom": zod.number(),
+  "marginLeft": zod.number(),
+  "marginRight": zod.number(),
+  "paragraphAlign": zod.string(),
+  "firstLineIndent": zod.number()
+}),
+  "analysis": zod.union([zod.object({
+  "researchType": zod.string(),
+  "pageCount": zod.number(),
+  "language": zod.string(),
+  "specialization": zod.string(),
+  "summary": zod.string(),
+  "detectedSections": zod.array(zod.string())
+}),zod.null()]).optional(),
+  "verification": zod.union([zod.object({
+  "readinessScore": zod.number(),
+  "completeness": zod.number(),
+  "citations": zod.number(),
+  "indexing": zod.number(),
+  "formatting": zod.number(),
+  "issues": zod.array(zod.object({
+  "type": zod.string(),
+  "severity": zod.string(),
+  "message": zod.string(),
+  "location": zod.string().nullish(),
+  "suggestion": zod.string().nullish()
+}))
+}),zod.null()]).optional(),
+  "readinessScore": zod.number().nullish(),
+  "sourceLibraryDocumentId": zod.number().nullish(),
+  "richContent": zod.string().nullish(),
+  "layoutMetadata": zod.union([zod.object({
+  "coverPageHtml": zod.string().optional(),
+  "headerHtml": zod.string().optional(),
+  "footerHtml": zod.string().optional(),
+  "showPageNumbers": zod.boolean().optional(),
+  "pageNumberFormat": zod.string().optional(),
+  "pageNumberAlign": zod.enum(['left', 'center', 'right']).optional(),
+  "pageSetup": zod.object({
+  "size": zod.string().optional(),
+  "orientation": zod.enum(['portrait', 'landscape']).optional(),
+  "marginTop": zod.number().optional(),
+  "marginBottom": zod.number().optional(),
+  "marginLeft": zod.number().optional(),
+  "marginRight": zod.number().optional()
+}).optional(),
+  "cover": zod.object({
+  "title": zod.string().optional(),
+  "subtitle": zod.string().optional(),
+  "studentName": zod.string().optional(),
+  "supervisor": zod.string().optional(),
+  "university": zod.string().optional(),
+  "faculty": zod.string().optional(),
+  "department": zod.string().optional(),
+  "degree": zod.string().optional(),
+  "year": zod.string().optional(),
+  "logoUrl": zod.string().optional()
+}).optional()
+}),zod.null()]).optional(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
 })
 
 

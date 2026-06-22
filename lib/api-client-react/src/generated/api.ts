@@ -20,16 +20,32 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdminLogin,
+  AdminSession,
   AssistInput,
   AssistResult,
+  CreateVersionInput,
+  DocumentVersion,
+  Error,
+  ErrorEnvelope,
   HealthStatus,
+  LibraryCategory,
+  LibraryCategoryInput,
+  LibraryDocument,
+  LibraryDocumentUpdate,
+  LibraryFacets,
+  LibraryListResponse,
+  ListLibraryDocumentsParams,
   NotFoundResponse,
   Project,
   ProjectInput,
   ProjectSummary,
   ProjectUpdate,
   Stats,
-  Template
+  Template,
+  UnauthorizedResponse,
+  UploadUrlRequest,
+  UploadUrlResponse
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1001,4 +1017,1266 @@ export function useGetStats<TData = Awaited<ReturnType<typeof getStats>>, TError
 
 
 
+
+export const getRequestUploadUrlUrl = () => {
+
+
+
+
+  return `/api/storage/uploads/request-url`
+}
+
+/**
+ * @summary Request a presigned URL for file upload
+ */
+export const requestUploadUrl = async (uploadUrlRequest: UploadUrlRequest, options?: RequestInit): Promise<UploadUrlResponse> => {
+
+  return customFetch<UploadUrlResponse>(getRequestUploadUrlUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      uploadUrlRequest,)
+  }
+);}
+
+
+
+
+export const getRequestUploadUrlMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<UploadUrlRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<UploadUrlRequest>}, TContext> => {
+
+const mutationKey = ['requestUploadUrl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestUploadUrl>>, {data: BodyType<UploadUrlRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestUploadUrl(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof requestUploadUrl>>>
+    export type RequestUploadUrlMutationBody = BodyType<UploadUrlRequest>
+    export type RequestUploadUrlMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Request a presigned URL for file upload
+ */
+export const useRequestUploadUrl = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<UploadUrlRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestUploadUrl>>,
+        TError,
+        {data: BodyType<UploadUrlRequest>},
+        TContext
+      > => {
+      return useMutation(getRequestUploadUrlMutationOptions(options));
+    }
+
+export const getGetPublicObjectUrl = (filePath: string,) => {
+
+
+
+
+  return `/api/storage/public-objects/${filePath}`
+}
+
+/**
+ * @summary Serve a public asset from PUBLIC_OBJECT_SEARCH_PATHS
+ */
+export const getPublicObject = async (filePath: string, options?: RequestInit): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetPublicObjectUrl(filePath),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPublicObjectQueryKey = (filePath: string,) => {
+    return [
+    `/api/storage/public-objects/${filePath}`
+    ] as const;
+    }
+
+
+export const getGetPublicObjectQueryOptions = <TData = Awaited<ReturnType<typeof getPublicObject>>, TError = ErrorType<ErrorEnvelope>>(filePath: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPublicObject>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPublicObjectQueryKey(filePath);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPublicObject>>> = ({ signal }) => getPublicObject(filePath, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(filePath), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPublicObject>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPublicObjectQueryResult = NonNullable<Awaited<ReturnType<typeof getPublicObject>>>
+export type GetPublicObjectQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary Serve a public asset from PUBLIC_OBJECT_SEARCH_PATHS
+ */
+
+export function useGetPublicObject<TData = Awaited<ReturnType<typeof getPublicObject>>, TError = ErrorType<ErrorEnvelope>>(
+ filePath: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPublicObject>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPublicObjectQueryOptions(filePath,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetStorageObjectUrl = (objectPath: string,) => {
+
+
+
+
+  return `/api/storage/objects/${objectPath}`
+}
+
+/**
+ * @summary Serve an object entity from PRIVATE_OBJECT_DIR
+ */
+export const getStorageObject = async (objectPath: string, options?: RequestInit): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetStorageObjectUrl(objectPath),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetStorageObjectQueryKey = (objectPath: string,) => {
+    return [
+    `/api/storage/objects/${objectPath}`
+    ] as const;
+    }
+
+
+export const getGetStorageObjectQueryOptions = <TData = Awaited<ReturnType<typeof getStorageObject>>, TError = ErrorType<ErrorEnvelope>>(objectPath: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStorageObject>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStorageObjectQueryKey(objectPath);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStorageObject>>> = ({ signal }) => getStorageObject(objectPath, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(objectPath), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStorageObject>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetStorageObjectQueryResult = NonNullable<Awaited<ReturnType<typeof getStorageObject>>>
+export type GetStorageObjectQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary Serve an object entity from PRIVATE_OBJECT_DIR
+ */
+
+export function useGetStorageObject<TData = Awaited<ReturnType<typeof getStorageObject>>, TError = ErrorType<ErrorEnvelope>>(
+ objectPath: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStorageObject>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetStorageObjectQueryOptions(objectPath,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListLibraryDocumentsUrl = (params?: ListLibraryDocumentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/library?${stringifiedParams}` : `/api/library`
+}
+
+/**
+ * @summary Browse the research library with filters
+ */
+export const listLibraryDocuments = async (params?: ListLibraryDocumentsParams, options?: RequestInit): Promise<LibraryListResponse> => {
+
+  return customFetch<LibraryListResponse>(getListLibraryDocumentsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListLibraryDocumentsQueryKey = (params?: ListLibraryDocumentsParams,) => {
+    return [
+    `/api/library`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListLibraryDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listLibraryDocuments>>, TError = ErrorType<unknown>>(params?: ListLibraryDocumentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLibraryDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLibraryDocumentsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLibraryDocuments>>> = ({ signal }) => listLibraryDocuments(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLibraryDocuments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListLibraryDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listLibraryDocuments>>>
+export type ListLibraryDocumentsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Browse the research library with filters
+ */
+
+export function useListLibraryDocuments<TData = Awaited<ReturnType<typeof listLibraryDocuments>>, TError = ErrorType<unknown>>(
+ params?: ListLibraryDocumentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLibraryDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListLibraryDocumentsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetLibraryFacetsUrl = () => {
+
+
+
+
+  return `/api/library/facets`
+}
+
+/**
+ * @summary Distinct filter values with counts
+ */
+export const getLibraryFacets = async ( options?: RequestInit): Promise<LibraryFacets> => {
+
+  return customFetch<LibraryFacets>(getGetLibraryFacetsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLibraryFacetsQueryKey = () => {
+    return [
+    `/api/library/facets`
+    ] as const;
+    }
+
+
+export const getGetLibraryFacetsQueryOptions = <TData = Awaited<ReturnType<typeof getLibraryFacets>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLibraryFacets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLibraryFacetsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLibraryFacets>>> = ({ signal }) => getLibraryFacets({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLibraryFacets>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLibraryFacetsQueryResult = NonNullable<Awaited<ReturnType<typeof getLibraryFacets>>>
+export type GetLibraryFacetsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Distinct filter values with counts
+ */
+
+export function useGetLibraryFacets<TData = Awaited<ReturnType<typeof getLibraryFacets>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLibraryFacets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLibraryFacetsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListLibraryCategoriesUrl = () => {
+
+
+
+
+  return `/api/library/categories`
+}
+
+/**
+ * @summary Admin-managed taxonomy for filters
+ */
+export const listLibraryCategories = async ( options?: RequestInit): Promise<LibraryCategory[]> => {
+
+  return customFetch<LibraryCategory[]>(getListLibraryCategoriesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListLibraryCategoriesQueryKey = () => {
+    return [
+    `/api/library/categories`
+    ] as const;
+    }
+
+
+export const getListLibraryCategoriesQueryOptions = <TData = Awaited<ReturnType<typeof listLibraryCategories>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLibraryCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLibraryCategoriesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLibraryCategories>>> = ({ signal }) => listLibraryCategories({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLibraryCategories>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListLibraryCategoriesQueryResult = NonNullable<Awaited<ReturnType<typeof listLibraryCategories>>>
+export type ListLibraryCategoriesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Admin-managed taxonomy for filters
+ */
+
+export function useListLibraryCategories<TData = Awaited<ReturnType<typeof listLibraryCategories>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLibraryCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListLibraryCategoriesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetLibraryDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/library/${id}`
+}
+
+/**
+ * @summary Get a full library document (with rich content) for preview
+ */
+export const getLibraryDocument = async (id: number, options?: RequestInit): Promise<LibraryDocument> => {
+
+  return customFetch<LibraryDocument>(getGetLibraryDocumentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLibraryDocumentQueryKey = (id: number,) => {
+    return [
+    `/api/library/${id}`
+    ] as const;
+    }
+
+
+export const getGetLibraryDocumentQueryOptions = <TData = Awaited<ReturnType<typeof getLibraryDocument>>, TError = ErrorType<NotFoundResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLibraryDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLibraryDocumentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLibraryDocument>>> = ({ signal }) => getLibraryDocument(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLibraryDocument>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLibraryDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof getLibraryDocument>>>
+export type GetLibraryDocumentQueryError = ErrorType<NotFoundResponse>
+
+
+/**
+ * @summary Get a full library document (with rich content) for preview
+ */
+
+export function useGetLibraryDocument<TData = Awaited<ReturnType<typeof getLibraryDocument>>, TError = ErrorType<NotFoundResponse>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLibraryDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLibraryDocumentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUseLibraryDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/library/${id}/use`
+}
+
+/**
+ * @summary Duplicate a library document into a private editable project copy
+ */
+export const useLibraryDocument = async (id: number, options?: RequestInit): Promise<Project> => {
+
+  return customFetch<Project>(getUseLibraryDocumentUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getUseLibraryDocumentMutationOptions = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof useLibraryDocument>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof useLibraryDocument>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['useLibraryDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof useLibraryDocument>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  useLibraryDocument(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UseLibraryDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof useLibraryDocument>>>
+
+    export type UseLibraryDocumentMutationError = ErrorType<NotFoundResponse>
+
+    /**
+ * @summary Duplicate a library document into a private editable project copy
+ */
+export const useUseLibraryDocument = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof useLibraryDocument>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof useLibraryDocument>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getUseLibraryDocumentMutationOptions(options));
+    }
+
+export const getAdminLoginUrl = () => {
+
+
+
+
+  return `/api/admin/login`
+}
+
+/**
+ * @summary Validate the admin password and return a session token
+ */
+export const adminLogin = async (adminLogin: AdminLogin, options?: RequestInit): Promise<AdminSession> => {
+
+  return customFetch<AdminSession>(getAdminLoginUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      adminLogin,)
+  }
+);}
+
+
+
+
+export const getAdminLoginMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError,{data: BodyType<AdminLogin>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError,{data: BodyType<AdminLogin>}, TContext> => {
+
+const mutationKey = ['adminLogin'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminLogin>>, {data: BodyType<AdminLogin>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminLogin(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminLoginMutationResult = NonNullable<Awaited<ReturnType<typeof adminLogin>>>
+    export type AdminLoginMutationBody = BodyType<AdminLogin>
+    export type AdminLoginMutationError = ErrorType<Error>
+
+    /**
+ * @summary Validate the admin password and return a session token
+ */
+export const useAdminLogin = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError,{data: BodyType<AdminLogin>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminLogin>>,
+        TError,
+        {data: BodyType<AdminLogin>},
+        TContext
+      > => {
+      return useMutation(getAdminLoginMutationOptions(options));
+    }
+
+export const getListAdminLibraryUrl = () => {
+
+
+
+
+  return `/api/admin/library`
+}
+
+/**
+ * @summary List all library documents (including drafts) for administration
+ */
+export const listAdminLibrary = async ( options?: RequestInit): Promise<LibraryDocument[]> => {
+
+  return customFetch<LibraryDocument[]>(getListAdminLibraryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminLibraryQueryKey = () => {
+    return [
+    `/api/admin/library`
+    ] as const;
+    }
+
+
+export const getListAdminLibraryQueryOptions = <TData = Awaited<ReturnType<typeof listAdminLibrary>>, TError = ErrorType<UnauthorizedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminLibrary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminLibraryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminLibrary>>> = ({ signal }) => listAdminLibrary({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminLibrary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminLibraryQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminLibrary>>>
+export type ListAdminLibraryQueryError = ErrorType<UnauthorizedResponse>
+
+
+/**
+ * @summary List all library documents (including drafts) for administration
+ */
+
+export function useListAdminLibrary<TData = Awaited<ReturnType<typeof listAdminLibrary>>, TError = ErrorType<UnauthorizedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminLibrary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminLibraryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateLibraryDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/library/${id}`
+}
+
+/**
+ * @summary Update library document metadata or content
+ */
+export const updateLibraryDocument = async (id: number,
+    libraryDocumentUpdate: LibraryDocumentUpdate, options?: RequestInit): Promise<LibraryDocument> => {
+
+  return customFetch<LibraryDocument>(getUpdateLibraryDocumentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      libraryDocumentUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateLibraryDocumentMutationOptions = <TError = ErrorType<UnauthorizedResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLibraryDocument>>, TError,{id: number;data: BodyType<LibraryDocumentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateLibraryDocument>>, TError,{id: number;data: BodyType<LibraryDocumentUpdate>}, TContext> => {
+
+const mutationKey = ['updateLibraryDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateLibraryDocument>>, {id: number;data: BodyType<LibraryDocumentUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateLibraryDocument(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateLibraryDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof updateLibraryDocument>>>
+    export type UpdateLibraryDocumentMutationBody = BodyType<LibraryDocumentUpdate>
+    export type UpdateLibraryDocumentMutationError = ErrorType<UnauthorizedResponse | NotFoundResponse>
+
+    /**
+ * @summary Update library document metadata or content
+ */
+export const useUpdateLibraryDocument = <TError = ErrorType<UnauthorizedResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLibraryDocument>>, TError,{id: number;data: BodyType<LibraryDocumentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateLibraryDocument>>,
+        TError,
+        {id: number;data: BodyType<LibraryDocumentUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateLibraryDocumentMutationOptions(options));
+    }
+
+export const getDeleteLibraryDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/library/${id}`
+}
+
+/**
+ * @summary Delete a library document
+ */
+export const deleteLibraryDocument = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteLibraryDocumentUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteLibraryDocumentMutationOptions = <TError = ErrorType<UnauthorizedResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteLibraryDocument>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteLibraryDocument>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteLibraryDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteLibraryDocument>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteLibraryDocument(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteLibraryDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteLibraryDocument>>>
+
+    export type DeleteLibraryDocumentMutationError = ErrorType<UnauthorizedResponse | NotFoundResponse>
+
+    /**
+ * @summary Delete a library document
+ */
+export const useDeleteLibraryDocument = <TError = ErrorType<UnauthorizedResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteLibraryDocument>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteLibraryDocument>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteLibraryDocumentMutationOptions(options));
+    }
+
+export const getCreateLibraryCategoryUrl = () => {
+
+
+
+
+  return `/api/admin/categories`
+}
+
+/**
+ * @summary Create a taxonomy entry
+ */
+export const createLibraryCategory = async (libraryCategoryInput: LibraryCategoryInput, options?: RequestInit): Promise<LibraryCategory> => {
+
+  return customFetch<LibraryCategory>(getCreateLibraryCategoryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      libraryCategoryInput,)
+  }
+);}
+
+
+
+
+export const getCreateLibraryCategoryMutationOptions = <TError = ErrorType<UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLibraryCategory>>, TError,{data: BodyType<LibraryCategoryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createLibraryCategory>>, TError,{data: BodyType<LibraryCategoryInput>}, TContext> => {
+
+const mutationKey = ['createLibraryCategory'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createLibraryCategory>>, {data: BodyType<LibraryCategoryInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createLibraryCategory(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateLibraryCategoryMutationResult = NonNullable<Awaited<ReturnType<typeof createLibraryCategory>>>
+    export type CreateLibraryCategoryMutationBody = BodyType<LibraryCategoryInput>
+    export type CreateLibraryCategoryMutationError = ErrorType<UnauthorizedResponse>
+
+    /**
+ * @summary Create a taxonomy entry
+ */
+export const useCreateLibraryCategory = <TError = ErrorType<UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLibraryCategory>>, TError,{data: BodyType<LibraryCategoryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createLibraryCategory>>,
+        TError,
+        {data: BodyType<LibraryCategoryInput>},
+        TContext
+      > => {
+      return useMutation(getCreateLibraryCategoryMutationOptions(options));
+    }
+
+export const getDeleteLibraryCategoryUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/categories/${id}`
+}
+
+/**
+ * @summary Delete a taxonomy entry
+ */
+export const deleteLibraryCategory = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteLibraryCategoryUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteLibraryCategoryMutationOptions = <TError = ErrorType<UnauthorizedResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteLibraryCategory>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteLibraryCategory>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteLibraryCategory'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteLibraryCategory>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteLibraryCategory(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteLibraryCategoryMutationResult = NonNullable<Awaited<ReturnType<typeof deleteLibraryCategory>>>
+
+    export type DeleteLibraryCategoryMutationError = ErrorType<UnauthorizedResponse | NotFoundResponse>
+
+    /**
+ * @summary Delete a taxonomy entry
+ */
+export const useDeleteLibraryCategory = <TError = ErrorType<UnauthorizedResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteLibraryCategory>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteLibraryCategory>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteLibraryCategoryMutationOptions(options));
+    }
+
+export const getListProjectVersionsUrl = (id: number,) => {
+
+
+
+
+  return `/api/projects/${id}/versions`
+}
+
+/**
+ * @summary List version history for a project
+ */
+export const listProjectVersions = async (id: number, options?: RequestInit): Promise<DocumentVersion[]> => {
+
+  return customFetch<DocumentVersion[]>(getListProjectVersionsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProjectVersionsQueryKey = (id: number,) => {
+    return [
+    `/api/projects/${id}/versions`
+    ] as const;
+    }
+
+
+export const getListProjectVersionsQueryOptions = <TData = Awaited<ReturnType<typeof listProjectVersions>>, TError = ErrorType<NotFoundResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjectVersions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProjectVersionsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectVersions>>> = ({ signal }) => listProjectVersions(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProjectVersions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProjectVersionsQueryResult = NonNullable<Awaited<ReturnType<typeof listProjectVersions>>>
+export type ListProjectVersionsQueryError = ErrorType<NotFoundResponse>
+
+
+/**
+ * @summary List version history for a project
+ */
+
+export function useListProjectVersions<TData = Awaited<ReturnType<typeof listProjectVersions>>, TError = ErrorType<NotFoundResponse>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjectVersions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProjectVersionsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateProjectVersionUrl = (id: number,) => {
+
+
+
+
+  return `/api/projects/${id}/versions`
+}
+
+/**
+ * @summary Snapshot the current project state as a new version
+ */
+export const createProjectVersion = async (id: number,
+    createVersionInput: CreateVersionInput, options?: RequestInit): Promise<DocumentVersion> => {
+
+  return customFetch<DocumentVersion>(getCreateProjectVersionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createVersionInput,)
+  }
+);}
+
+
+
+
+export const getCreateProjectVersionMutationOptions = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProjectVersion>>, TError,{id: number;data: BodyType<CreateVersionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createProjectVersion>>, TError,{id: number;data: BodyType<CreateVersionInput>}, TContext> => {
+
+const mutationKey = ['createProjectVersion'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProjectVersion>>, {id: number;data: BodyType<CreateVersionInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createProjectVersion(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateProjectVersionMutationResult = NonNullable<Awaited<ReturnType<typeof createProjectVersion>>>
+    export type CreateProjectVersionMutationBody = BodyType<CreateVersionInput>
+    export type CreateProjectVersionMutationError = ErrorType<NotFoundResponse>
+
+    /**
+ * @summary Snapshot the current project state as a new version
+ */
+export const useCreateProjectVersion = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProjectVersion>>, TError,{id: number;data: BodyType<CreateVersionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createProjectVersion>>,
+        TError,
+        {id: number;data: BodyType<CreateVersionInput>},
+        TContext
+      > => {
+      return useMutation(getCreateProjectVersionMutationOptions(options));
+    }
+
+export const getRestoreProjectVersionUrl = (id: number,
+    versionId: number,) => {
+
+
+
+
+  return `/api/projects/${id}/versions/${versionId}/restore`
+}
+
+/**
+ * @summary Restore a project to a previous version snapshot
+ */
+export const restoreProjectVersion = async (id: number,
+    versionId: number, options?: RequestInit): Promise<Project> => {
+
+  return customFetch<Project>(getRestoreProjectVersionUrl(id,versionId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRestoreProjectVersionMutationOptions = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreProjectVersion>>, TError,{id: number;versionId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreProjectVersion>>, TError,{id: number;versionId: number}, TContext> => {
+
+const mutationKey = ['restoreProjectVersion'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreProjectVersion>>, {id: number;versionId: number}> = (props) => {
+          const {id,versionId} = props ?? {};
+
+          return  restoreProjectVersion(id,versionId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreProjectVersionMutationResult = NonNullable<Awaited<ReturnType<typeof restoreProjectVersion>>>
+
+    export type RestoreProjectVersionMutationError = ErrorType<NotFoundResponse>
+
+    /**
+ * @summary Restore a project to a previous version snapshot
+ */
+export const useRestoreProjectVersion = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreProjectVersion>>, TError,{id: number;versionId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreProjectVersion>>,
+        TError,
+        {id: number;versionId: number},
+        TContext
+      > => {
+      return useMutation(getRestoreProjectVersionMutationOptions(options));
+    }
 

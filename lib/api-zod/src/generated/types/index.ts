@@ -6,13 +6,33 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adminLogin';
+export * from './adminSession';
 export * from './analysis';
 export * from './assistInput';
 export * from './assistResult';
+export * from './coverFields';
+export * from './createVersionInput';
+export * from './documentSnapshot';
+export * from './documentVersion';
 export * from './error';
+export * from './errorEnvelope';
+export * from './facetCount';
 export * from './formatting';
 export * from './healthStatus';
+export * from './layoutMetadata';
+export * from './layoutMetadataPageNumberAlign';
+export * from './libraryCategory';
+export * from './libraryCategoryInput';
+export * from './libraryDocument';
+export * from './libraryDocumentSummary';
+export * from './libraryDocumentUpdate';
+export * from './libraryFacets';
+export * from './libraryListResponse';
+export * from './listLibraryDocumentsParams';
 export * from './notFoundResponse';
+export * from './pageSetup';
+export * from './pageSetupOrientation';
 export * from './project';
 export * from './projectInput';
 export * from './projectSummary';
@@ -21,6 +41,9 @@ export * from './reference';
 export * from './section';
 export * from './stats';
 export * from './template';
+export * from './unauthorizedResponse';
+export * from './uploadUrlRequest';
+export * from './uploadUrlResponse';
 export * from './verification';
 export * from './verificationIssue';
 export * from './workTypeCount';

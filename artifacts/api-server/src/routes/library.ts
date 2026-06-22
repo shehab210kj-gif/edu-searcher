@@ -1,0 +1,177 @@
+import { Router, type IRouter } from "express";
+import { and, eq, or, ilike, desc, sql } from "drizzle-orm";
+import {
+  db,
+  libraryDocumentsTable,
+  libraryCategoriesTable,
+  projectsTable,
+} from "@workspace/db";
+import {
+  ListLibraryDocumentsQueryParams,
+  GetLibraryDocumentParams,
+  UseLibraryDocumentParams,
+} from "@workspace/api-zod";
+import { defaultFormatting } from "../lib/formatting";
+import {
+  serializeLibraryDocument,
+  serializeLibraryDocumentSummary,
+  serializeLibraryCategory,
+  serializeProject,
+} from "../lib/serialize";
+
+const router: IRouter = Router();
+
+const PUBLISHED = eq(libraryDocumentsTable.status, "published");
+
+router.get("/library", async (req, res): Promise<void> => {
+  const parsed = ListLibraryDocumentsQueryParams.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const q = parsed.data;
+  const conditions = [PUBLISHED];
+
+  if (q.documentType)
+    conditions.push(eq(libraryDocumentsTable.documentType, q.documentType));
+  if (q.category) conditions.push(eq(libraryDocumentsTable.category, q.category));
+  if (q.university)
+    conditions.push(eq(libraryDocumentsTable.university, q.university));
+  if (q.degreeLevel)
+    conditions.push(eq(libraryDocumentsTable.degreeLevel, q.degreeLevel));
+  if (q.department)
+    conditions.push(eq(libraryDocumentsTable.department, q.department));
+  if (q.language) conditions.push(eq(libraryDocumentsTable.language, q.language));
+  if (q.tag) {
+    conditions.push(
+      sql`${libraryDocumentsTable.tags}::jsonb @> ${JSON.stringify([q.tag])}::jsonb`,
+    );
+  }
+  if (q.search) {
+    const term = `%${q.search}%`;
+    const search = or(
+      ilike(libraryDocumentsTable.title, term),
+      ilike(libraryDocumentsTable.description, term),
+      ilike(libraryDocumentsTable.university, term),
+      ilike(libraryDocumentsTable.department, term),
+    );
+    if (search) conditions.push(search);
+  }
+
+  const where = and(...conditions);
+  const page = q.page ?? 1;
+  const pageSize = q.pageSize ?? 12;
+
+  const [{ value: total }] = await db
+    .select({ value: sql<number>`count(*)::int` })
+    .from(libraryDocumentsTable)
+    .where(where);
+
+  const rows = await db
+    .select()
+    .from(libraryDocumentsTable)
+    .where(where)
+    .orderBy(desc(libraryDocumentsTable.updatedAt))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+
+  res.json({
+    items: rows.map(serializeLibraryDocumentSummary),
+    total,
+    page,
+    pageSize,
+  });
+});
+
+router.get("/library/facets", async (_req, res): Promise<void> => {
+  async function facet(
+    column:
+      | typeof libraryDocumentsTable.documentType
+      | typeof libraryDocumentsTable.category
+      | typeof libraryDocumentsTable.university
+      | typeof libraryDocumentsTable.department
+      | typeof libraryDocumentsTable.degreeLevel
+      | typeof libraryDocumentsTable.language,
+  ): Promise<{ value: string; count: number }[]> {
+    const rows = await db
+      .select({ value: column, count: sql<number>`count(*)::int` })
+      .from(libraryDocumentsTable)
+      .where(and(PUBLISHED, sql`${column} is not null and ${column} <> ''`))
+      .groupBy(column)
+      .orderBy(desc(sql`count(*)`));
+    return rows
+      .filter((r): r is { value: string; count: number } => r.value != null)
+      .map((r) => ({ value: r.value, count: r.count }));
+  }
+
+  res.json({
+    documentTypes: await facet(libraryDocumentsTable.documentType),
+    categories: await facet(libraryDocumentsTable.category),
+    universities: await facet(libraryDocumentsTable.university),
+    departments: await facet(libraryDocumentsTable.department),
+    degreeLevels: await facet(libraryDocumentsTable.degreeLevel),
+    languages: await facet(libraryDocumentsTable.language),
+  });
+});
+
+router.get("/library/categories", async (_req, res): Promise<void> => {
+  const rows = await db
+    .select()
+    .from(libraryCategoriesTable)
+    .orderBy(libraryCategoriesTable.name);
+  res.json(rows.map(serializeLibraryCategory));
+});
+
+router.get("/library/:id", async (req, res): Promise<void> => {
+  const params = GetLibraryDocumentParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [doc] = await db
+    .select()
+    .from(libraryDocumentsTable)
+    .where(
+      and(eq(libraryDocumentsTable.id, params.data.id), PUBLISHED),
+    );
+  if (!doc) {
+    res.status(404).json({ error: "المستند غير موجود" });
+    return;
+  }
+  res.json(serializeLibraryDocument(doc));
+});
+
+router.post("/library/:id/use", async (req, res): Promise<void> => {
+  const params = UseLibraryDocumentParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [doc] = await db
+    .select()
+    .from(libraryDocumentsTable)
+    .where(and(eq(libraryDocumentsTable.id, params.data.id), PUBLISHED));
+  if (!doc) {
+    res.status(404).json({ error: "المستند غير موجود" });
+    return;
+  }
+
+  const [project] = await db
+    .insert(projectsTable)
+    .values({
+      title: doc.title,
+      workType: doc.documentType,
+      citationStyle: "APA",
+      language: doc.language,
+      rawContent: "",
+      formatting: doc.formatting ?? defaultFormatting,
+      sourceLibraryDocumentId: doc.id,
+      richContent: doc.richContent,
+      layoutMetadata: doc.layoutMetadata,
+    })
+    .returning();
+
+  res.status(201).json(serializeProject(project));
+});
+
+export default router;

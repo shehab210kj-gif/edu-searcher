@@ -18,6 +18,14 @@ tags:
     description: Formatting templates library
   - name: stats
     description: Dashboard statistics
+  - name: Storage
+    description: Object storage upload and serving endpoints.
+  - name: library
+    description: Academic research library (master templates and previous research)
+  - name: admin
+    description: Password-gated library administration
+  - name: versions
+    description: Document version history
 paths:
   /healthz:
     get:
@@ -237,6 +245,365 @@ paths:
               schema:
                 $ref: "#/components/schemas/Stats"
 
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for file upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "400":
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Failed to generate upload URL.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /storage/public-objects/{filePath}:
+    get:
+      tags: [Storage]
+      operationId: getPublicObject
+      summary: Serve a public asset from PUBLIC_OBJECT_SEARCH_PATHS
+      parameters:
+        - name: filePath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Object content streamed with correct Content-Type.
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: File not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Failed to serve public object.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /storage/objects/{objectPath}:
+    get:
+      tags: [Storage]
+      operationId: getStorageObject
+      summary: Serve an object entity from PRIVATE_OBJECT_DIR
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Object content streamed with correct Content-Type.
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Object not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Failed to serve object.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /library:
+    get:
+      operationId: listLibraryDocuments
+      tags: [library]
+      summary: Browse the research library with filters
+      parameters:
+        - { name: search, in: query, required: false, schema: { type: string } }
+        - { name: documentType, in: query, required: false, schema: { type: string } }
+        - { name: category, in: query, required: false, schema: { type: string } }
+        - { name: university, in: query, required: false, schema: { type: string } }
+        - { name: degreeLevel, in: query, required: false, schema: { type: string } }
+        - { name: department, in: query, required: false, schema: { type: string } }
+        - { name: language, in: query, required: false, schema: { type: string } }
+        - { name: tag, in: query, required: false, schema: { type: string } }
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 1 } }
+        - { name: pageSize, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100 } }
+      responses:
+        "200":
+          description: Matching library documents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryListResponse"
+
+  /library/facets:
+    get:
+      operationId: getLibraryFacets
+      tags: [library]
+      summary: Distinct filter values with counts
+      responses:
+        "200":
+          description: Facets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryFacets"
+
+  /library/categories:
+    get:
+      operationId: listLibraryCategories
+      tags: [library]
+      summary: Admin-managed taxonomy for filters
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LibraryCategory"
+
+  /library/{id}:
+    get:
+      operationId: getLibraryDocument
+      tags: [library]
+      summary: Get a full library document (with rich content) for preview
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Library document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryDocument"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /library/{id}/use:
+    post:
+      operationId: useLibraryDocument
+      tags: [library]
+      summary: Duplicate a library document into a private editable project copy
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "201":
+          description: Created editable copy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      summary: Validate the admin password and return a session token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLogin"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSession"
+        "401":
+          description: Invalid password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /admin/library:
+    get:
+      operationId: listAdminLibrary
+      tags: [admin]
+      summary: List all library documents (including drafts) for administration
+      responses:
+        "200":
+          description: All library documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LibraryDocument"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /admin/library/{id}:
+    patch:
+      operationId: updateLibraryDocument
+      tags: [admin]
+      summary: Update library document metadata or content
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LibraryDocumentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryDocument"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteLibraryDocument
+      tags: [admin]
+      summary: Delete a library document
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/categories:
+    post:
+      operationId: createLibraryCategory
+      tags: [admin]
+      summary: Create a taxonomy entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LibraryCategoryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryCategory"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /admin/categories/{id}:
+    delete:
+      operationId: deleteLibraryCategory
+      tags: [admin]
+      summary: Delete a taxonomy entry
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{id}/versions:
+    get:
+      operationId: listProjectVersions
+      tags: [versions]
+      summary: List version history for a project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Versions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentVersion"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: createProjectVersion
+      tags: [versions]
+      summary: Snapshot the current project state as a new version
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVersionInput"
+      responses:
+        "201":
+          description: Created version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentVersion"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{id}/versions/{versionId}/restore:
+    post:
+      operationId: restoreProjectVersion
+      tags: [versions]
+      summary: Restore a project to a previous version snapshot
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Restored project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   parameters:
     ProjectId:
@@ -249,6 +616,12 @@ components:
   responses:
     NotFound:
       description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Admin authentication required
       content:
         application/json:
           schema:
@@ -401,6 +774,12 @@ components:
             - $ref: "#/components/schemas/Verification"
             - type: "null"
         readinessScore: { type: ["integer", "null"] }
+        sourceLibraryDocumentId: { type: ["integer", "null"] }
+        richContent: { type: ["string", "null"] }
+        layoutMetadata:
+          oneOf:
+            - $ref: "#/components/schemas/LayoutMetadata"
+            - type: "null"
         createdAt: { type: string }
         updatedAt: { type: string }
       required:
@@ -446,6 +825,11 @@ components:
             $ref: "#/components/schemas/Reference"
         formatting:
           $ref: "#/components/schemas/Formatting"
+        richContent: { type: ["string", "null"] }
+        layoutMetadata:
+          oneOf:
+            - $ref: "#/components/schemas/LayoutMetadata"
+            - type: "null"
 
     AssistInput:
       type: object
@@ -500,3 +884,265 @@ components:
         workType: { type: string }
         count: { type: integer }
       required: [workType, count]
+
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name: { type: string, minLength: 1 }
+        size: { type: integer, minimum: 1 }
+        contentType: { type: string, minLength: 1 }
+
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL: { type: string, format: uri }
+        objectPath: { type: string }
+        metadata:
+          $ref: "#/components/schemas/UploadUrlRequest"
+
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+
+    PageSetup:
+      type: object
+      properties:
+        size: { type: string }
+        orientation: { type: string, enum: [portrait, landscape] }
+        marginTop: { type: number }
+        marginBottom: { type: number }
+        marginLeft: { type: number }
+        marginRight: { type: number }
+
+    CoverFields:
+      type: object
+      properties:
+        title: { type: string }
+        subtitle: { type: string }
+        studentName: { type: string }
+        supervisor: { type: string }
+        university: { type: string }
+        faculty: { type: string }
+        department: { type: string }
+        degree: { type: string }
+        year: { type: string }
+        logoUrl: { type: string }
+
+    LayoutMetadata:
+      type: object
+      properties:
+        coverPageHtml: { type: string }
+        headerHtml: { type: string }
+        footerHtml: { type: string }
+        showPageNumbers: { type: boolean }
+        pageNumberFormat: { type: string }
+        pageNumberAlign: { type: string, enum: [left, center, right] }
+        pageSetup:
+          $ref: "#/components/schemas/PageSetup"
+        cover:
+          $ref: "#/components/schemas/CoverFields"
+
+    LibraryDocument:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        description: { type: string }
+        documentType: { type: string }
+        coverImageUrl: { type: ["string", "null"] }
+        university: { type: ["string", "null"] }
+        degreeLevel: { type: ["string", "null"] }
+        department: { type: ["string", "null"] }
+        category: { type: ["string", "null"] }
+        language: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        originalFileName: { type: ["string", "null"] }
+        originalFileUrl: { type: ["string", "null"] }
+        richContent: { type: string }
+        layoutMetadata:
+          $ref: "#/components/schemas/LayoutMetadata"
+        formatting:
+          oneOf:
+            - $ref: "#/components/schemas/Formatting"
+            - type: "null"
+        status: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+      required:
+        - id
+        - title
+        - description
+        - documentType
+        - language
+        - tags
+        - richContent
+        - layoutMetadata
+        - status
+        - createdAt
+        - updatedAt
+
+    LibraryDocumentSummary:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        description: { type: string }
+        documentType: { type: string }
+        coverImageUrl: { type: ["string", "null"] }
+        university: { type: ["string", "null"] }
+        degreeLevel: { type: ["string", "null"] }
+        department: { type: ["string", "null"] }
+        category: { type: ["string", "null"] }
+        language: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        status: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+      required:
+        - id
+        - title
+        - description
+        - documentType
+        - language
+        - tags
+        - status
+        - createdAt
+        - updatedAt
+
+    LibraryListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LibraryDocumentSummary"
+        total: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+      required: [items, total, page, pageSize]
+
+    LibraryDocumentUpdate:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        description: { type: string }
+        documentType: { type: string }
+        coverImageUrl: { type: ["string", "null"] }
+        university: { type: ["string", "null"] }
+        degreeLevel: { type: ["string", "null"] }
+        department: { type: ["string", "null"] }
+        category: { type: ["string", "null"] }
+        language: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        richContent: { type: string }
+        layoutMetadata:
+          $ref: "#/components/schemas/LayoutMetadata"
+        status: { type: string }
+
+    FacetCount:
+      type: object
+      properties:
+        value: { type: string }
+        count: { type: integer }
+      required: [value, count]
+
+    LibraryFacets:
+      type: object
+      properties:
+        documentTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetCount"
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetCount"
+        universities:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetCount"
+        departments:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetCount"
+        degreeLevels:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetCount"
+        languages:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetCount"
+      required:
+        - documentTypes
+        - categories
+        - universities
+        - departments
+        - degreeLevels
+        - languages
+
+    LibraryCategory:
+      type: object
+      properties:
+        id: { type: integer }
+        kind: { type: string }
+        name: { type: string }
+        createdAt: { type: string }
+      required: [id, kind, name, createdAt]
+
+    LibraryCategoryInput:
+      type: object
+      properties:
+        kind: { type: string }
+        name: { type: string, minLength: 1 }
+      required: [kind, name]
+
+    AdminLogin:
+      type: object
+      properties:
+        password: { type: string, minLength: 1 }
+      required: [password]
+
+    AdminSession:
+      type: object
+      properties:
+        token: { type: string }
+      required: [token]
+
+    DocumentSnapshot:
+      type: object
+      properties:
+        title: { type: string }
+        richContent: { type: string }
+        layoutMetadata:
+          $ref: "#/components/schemas/LayoutMetadata"
+        formatting:
+          oneOf:
+            - $ref: "#/components/schemas/Formatting"
+            - type: "null"
+
+    DocumentVersion:
+      type: object
+      properties:
+        id: { type: integer }
+        projectId: { type: integer }
+        label: { type: string }
+        snapshot:
+          $ref: "#/components/schemas/DocumentSnapshot"
+        createdAt: { type: string }
+      required: [id, projectId, label, snapshot, createdAt]
+
+    CreateVersionInput:
+      type: object
+      properties:
+        label: { type: string }

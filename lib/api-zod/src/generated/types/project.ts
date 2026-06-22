@@ -7,6 +7,7 @@
  */
 import type { Analysis } from './analysis';
 import type { Formatting } from './formatting';
+import type { LayoutMetadata } from './layoutMetadata';
 import type { Reference } from './reference';
 import type { Section } from './section';
 import type { Verification } from './verification';
@@ -27,6 +28,11 @@ export interface Project {
   verification?: Verification | null;
   /** @nullable */
   readinessScore?: number | null;
+  /** @nullable */
+  sourceLibraryDocumentId?: number | null;
+  /** @nullable */
+  richContent?: string | null;
+  layoutMetadata?: LayoutMetadata | null;
   createdAt: string;
   updatedAt: string;
 }

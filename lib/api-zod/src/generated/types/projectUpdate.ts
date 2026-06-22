@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Formatting } from './formatting';
+import type { LayoutMetadata } from './layoutMetadata';
 import type { Reference } from './reference';
 import type { Section } from './section';
 
@@ -21,4 +22,7 @@ export interface ProjectUpdate {
   sections?: Section[];
   references?: Reference[];
   formatting?: Formatting;
+  /** @nullable */
+  richContent?: string | null;
+  layoutMetadata?: LayoutMetadata | null;
 }
