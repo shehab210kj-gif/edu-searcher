@@ -9,7 +9,8 @@ import { NewProject } from "@/pages/NewProject";
 import { ProjectWorkspace } from "@/pages/ProjectWorkspace";
 import { Templates } from "@/pages/Templates";
 import { Library } from "@/pages/Library";
-import { LibraryDocumentDetail } from "@/pages/LibraryDocumentDetail";
+import { LibraryPreview } from "@/pages/LibraryPreview";
+import { Admin } from "@/pages/Admin";
 
 const queryClient = new QueryClient();
 
@@ -17,11 +18,12 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
+      <Route path="/library" component={Library} />
+      <Route path="/library/:id" component={LibraryPreview} />
       <Route path="/projects/new" component={NewProject} />
       <Route path="/projects/:id" component={ProjectWorkspace} />
-      <Route path="/library" component={Library} />
-      <Route path="/library/:id" component={LibraryDocumentDetail} />
       <Route path="/templates" component={Templates} />
+      <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
     </Switch>
   );

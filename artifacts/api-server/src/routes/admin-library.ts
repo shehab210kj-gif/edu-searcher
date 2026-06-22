@@ -81,6 +81,41 @@ router.post(
         .map((t) => t.trim())
         .filter(Boolean);
 
+      const replaceId = body.id ? Number.parseInt(body.id, 10) : NaN;
+
+      // When an `id` is supplied, replace the file (and refresh metadata) of an
+      // existing document instead of creating a new one.
+      if (Number.isInteger(replaceId)) {
+        const [doc] = await db
+          .update(libraryDocumentsTable)
+          .set({
+            title: body.title?.trim() || parsed.title || req.file.originalname,
+            description: body.description?.trim() ?? "",
+            documentType: body.documentType?.trim() || "master_template",
+            coverImageUrl: body.coverImageUrl?.trim() || null,
+            university: body.university?.trim() || null,
+            degreeLevel: body.degreeLevel?.trim() || null,
+            department: body.department?.trim() || null,
+            category: body.category?.trim() || null,
+            language: body.language?.trim() || "ar",
+            tags,
+            originalFileName: req.file.originalname,
+            originalFileUrl,
+            richContent: parsed.html,
+            layoutMetadata: parsed.layout,
+            status: body.status?.trim() || "published",
+          })
+          .where(eq(libraryDocumentsTable.id, replaceId))
+          .returning();
+
+        if (!doc) {
+          res.status(404).json({ error: "المستند غير موجود" });
+          return;
+        }
+        res.status(200).json(serializeLibraryDocument(doc));
+        return;
+      }
+
       const [doc] = await db
         .insert(libraryDocumentsTable)
         .values({

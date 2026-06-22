@@ -1,5 +1,12 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, BookOpen, Library, PlusCircle } from "lucide-react";
+import {
+  LayoutDashboard,
+  FileText,
+  Library,
+  PlusCircle,
+  BookOpen,
+  Settings,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -12,9 +19,10 @@ export function Layout({ children }: LayoutProps) {
 
   const navigation = [
     { name: "لوحة التحكم", href: "/", icon: LayoutDashboard },
-    { name: "المشاريع", href: "/projects/new", icon: PlusCircle, isAction: true },
     { name: "المكتبة البحثية", href: "/library", icon: BookOpen },
+    { name: "المشاريع", href: "/projects/new", icon: PlusCircle, isAction: true },
     { name: "القوالب", href: "/templates", icon: Library },
+    { name: "إدارة المكتبة", href: "/admin", icon: Settings },
   ];
 
   return (

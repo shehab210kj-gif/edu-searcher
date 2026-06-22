@@ -105,17 +105,24 @@ router.get("/library/facets", async (_req, res): Promise<void> => {
       .map((r) => ({ value: r.value, count: r.count }));
   }
 
-  const tagRows = await db
-    .select({
-      value: sql<string>`tag.value`,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(
-      sql`${libraryDocumentsTable}, jsonb_array_elements_text(${libraryDocumentsTable.tags}) AS tag(value)`,
-    )
-    .where(PUBLISHED)
-    .groupBy(sql`tag.value`)
-    .orderBy(desc(sql`count(*)`));
+  async function tagFacet(): Promise<{ value: string; count: number }[]> {
+    const rows = await db
+      .select({
+        value: sql<string>`tag.value`,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(libraryDocumentsTable)
+      .innerJoin(
+        sql`jsonb_array_elements_text(${libraryDocumentsTable.tags}::jsonb) as tag(value)`,
+        sql`true`,
+      )
+      .where(and(PUBLISHED, sql`tag.value <> ''`))
+      .groupBy(sql`tag.value`)
+      .orderBy(desc(sql`count(*)`));
+    return rows
+      .filter((r): r is { value: string; count: number } => r.value != null)
+      .map((r) => ({ value: r.value, count: r.count }));
+  }
 
   res.json({
     documentTypes: await facet(libraryDocumentsTable.documentType),
@@ -124,9 +131,7 @@ router.get("/library/facets", async (_req, res): Promise<void> => {
     departments: await facet(libraryDocumentsTable.department),
     degreeLevels: await facet(libraryDocumentsTable.degreeLevel),
     languages: await facet(libraryDocumentsTable.language),
-    tags: tagRows
-      .filter((r) => r.value != null && r.value !== "")
-      .map((r) => ({ value: r.value, count: r.count })),
+    tags: await tagFacet(),
   });
 });
 

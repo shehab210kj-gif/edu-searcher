@@ -1,313 +1,332 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import {
   useListLibraryDocuments,
   useGetLibraryFacets,
+  type FacetCount,
+  type LibraryDocumentSummary,
 } from "@workspace/api-client-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BookOpen, ArrowLeft, Search, X, ChevronLeft, ChevronRight, GraduationCap, Tag } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Search,
+  BookOpen,
+  Eye,
+  FilePlus2,
+  X,
+  GraduationCap,
+  Building2,
+  Filter,
+} from "lucide-react";
+import {
+  resolveStorageUrl,
+  documentTypeLabel,
+  languageLabel,
+} from "@/lib/library";
+import { cn } from "@/lib/utils";
 
-const PAGE_SIZE = 12;
+interface Filters {
+  documentType?: string;
+  category?: string;
+  university?: string;
+  degreeLevel?: string;
+  department?: string;
+  language?: string;
+  tag?: string;
+}
+
+const FILTER_GROUPS: {
+  key: keyof Filters;
+  label: string;
+  facet: keyof ReturnType<typeof facetGroups>;
+  translate?: (v: string) => string;
+}[] = [
+  { key: "university", label: "الجامعة", facet: "universities" },
+  { key: "degreeLevel", label: "الدرجة العلمية", facet: "degreeLevels" },
+  { key: "department", label: "القسم", facet: "departments" },
+  {
+    key: "documentType",
+    label: "نوع المستند",
+    facet: "documentTypes",
+    translate: documentTypeLabel,
+  },
+  { key: "category", label: "التصنيف", facet: "categories" },
+  {
+    key: "language",
+    label: "اللغة",
+    facet: "languages",
+    translate: languageLabel,
+  },
+  { key: "tag", label: "الكلمات المفتاحية", facet: "tags" },
+];
+
+function facetGroups() {
+  return {
+    universities: [] as FacetCount[],
+    degreeLevels: [] as FacetCount[],
+    departments: [] as FacetCount[],
+    documentTypes: [] as FacetCount[],
+    categories: [] as FacetCount[],
+    languages: [] as FacetCount[],
+    tags: [] as FacetCount[],
+  };
+}
+
+function ResearchCard({ doc }: { doc: LibraryDocumentSummary }) {
+  const cover = resolveStorageUrl(doc.coverImageUrl);
+  return (
+    <Card className="flex flex-col h-full overflow-hidden hover:border-primary/50 transition-colors group">
+      <div className="relative aspect-[3/4] bg-muted overflow-hidden">
+        {cover ? (
+          <img
+            src={cover}
+            alt={doc.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-primary/90 to-primary text-primary-foreground p-6 text-center">
+            <BookOpen className="w-10 h-10 mb-3 opacity-80" />
+            <span className="font-bold text-sm line-clamp-4 leading-relaxed">
+              {doc.title}
+            </span>
+          </div>
+        )}
+        <div className="absolute top-2 left-2">
+          <Badge variant="secondary" className="shadow-sm">
+            {documentTypeLabel(doc.documentType)}
+          </Badge>
+        </div>
+      </div>
+      <CardContent className="flex flex-col flex-1 p-4 gap-2">
+        <h3 className="font-bold text-base line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+          {doc.title}
+        </h3>
+        {doc.university && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Building2 className="w-3.5 h-3.5 shrink-0" />
+            <span className="line-clamp-1">{doc.university}</span>
+          </div>
+        )}
+        {doc.degreeLevel && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <GraduationCap className="w-3.5 h-3.5 shrink-0" />
+            <span className="line-clamp-1">{doc.degreeLevel}</span>
+          </div>
+        )}
+        {doc.description && (
+          <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+            {doc.description}
+          </p>
+        )}
+        <div className="flex flex-wrap gap-1 mt-1">
+          {doc.tags.slice(0, 3).map((tag) => (
+            <span
+              key={tag}
+              className="text-[10px] bg-muted px-2 py-0.5 rounded-full text-muted-foreground"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+        <div className="flex gap-2 mt-auto pt-3">
+          <Link href={`/library/${doc.id}`} className="flex-1">
+            <Button variant="outline" size="sm" className="w-full gap-1.5">
+              <Eye className="w-4 h-4" />
+              معاينة
+            </Button>
+          </Link>
+          <Link href={`/library/${doc.id}?use=1`} className="flex-1">
+            <Button size="sm" className="w-full gap-1.5">
+              <FilePlus2 className="w-4 h-4" />
+              استخدام
+            </Button>
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function Library() {
-  const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [category, setCategory] = useState<string | null>(null);
-  const [tag, setTag] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<Filters>({});
 
-  const { data: facets } = useGetLibraryFacets();
+  // Debounce keyword input so results update live as the user types.
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const params = useMemo(
     () => ({
       ...(search ? { search } : {}),
-      ...(category ? { category } : {}),
-      ...(tag ? { tag } : {}),
-      page,
-      pageSize: PAGE_SIZE,
+      ...filters,
+      pageSize: 60,
     }),
-    [search, category, tag, page],
+    [search, filters],
   );
 
-  const { data, isLoading, isError } = useListLibraryDocuments(params);
+  const { data, isLoading } = useListLibraryDocuments(params);
+  const { data: facets } = useGetLibraryFacets();
 
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
+  const activeFilters = Object.entries(filters).filter(([, v]) => v) as [
+    keyof Filters,
+    string,
+  ][];
 
-  const facetTags = facets?.tags.map((t) => t.value) ?? [];
-
-  const resetToFirstPage = () => setPage(1);
-
-  const applySearch = () => {
-    setSearch(searchInput.trim());
-    resetToFirstPage();
+  const toggleFilter = (key: keyof Filters, value: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: prev[key] === value ? undefined : value,
+    }));
   };
-
-  const selectCategory = (value: string | null) => {
-    setCategory(value);
-    resetToFirstPage();
-  };
-
-  const selectTag = (value: string | null) => {
-    setTag(value);
-    resetToFirstPage();
-  };
-
-  const hasActiveFilters = Boolean(search || category || tag);
 
   const clearAll = () => {
+    setFilters({});
     setSearch("");
     setSearchInput("");
-    setCategory(null);
-    setTag(null);
-    resetToFirstPage();
   };
 
   return (
-    <div className="space-y-8 fade-in-up">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">المكتبة البحثية</h1>
-          <p className="text-muted-foreground mt-2">
-            تصفّح نماذج الأبحاث والرسائل الأكاديمية الجاهزة واستخدمها كقالب لمشروعك
-          </p>
-        </div>
-        <div className="flex w-full md:w-auto gap-2">
-          <div className="relative flex-1 md:w-72">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="ابحث بالعنوان أو الجامعة أو القسم..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && applySearch()}
-              className="pr-9"
-            />
-          </div>
-          <Button onClick={applySearch}>بحث</Button>
-        </div>
+    <div className="space-y-6 fade-in-up">
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">المكتبة البحثية</h1>
+        <p className="text-muted-foreground mt-2">
+          تصفّح نماذج الرسائل والأبحاث الأكاديمية، عاينها بتنسيقها الأصلي،
+          واستخدمها كنقطة انطلاق لبحثك.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Facet sidebar */}
-        <aside className="lg:col-span-1 space-y-6">
-          <Card>
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <GraduationCap className="w-4 h-4 text-primary" />
-                التصنيفات
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-2">
-              <div className="space-y-1">
-                <button
-                  onClick={() => selectCategory(null)}
-                  className={`w-full text-right text-sm px-2 py-1.5 rounded transition-colors ${
-                    category === null
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  كل التصنيفات
-                </button>
-                {facets?.categories.map((f) => (
-                  <button
-                    key={f.value}
-                    onClick={() => selectCategory(f.value)}
-                    className={`w-full flex items-center justify-between text-right text-sm px-2 py-1.5 rounded transition-colors ${
-                      category === f.value
-                        ? "bg-primary/10 text-primary font-medium"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    <span className="truncate">{f.value}</span>
-                    <Badge variant="secondary" className="text-[10px] shrink-0">{f.count}</Badge>
-                  </button>
-                ))}
-                {(!facets || facets.categories.length === 0) && (
-                  <p className="text-xs text-muted-foreground px-2 py-1.5">لا توجد تصنيفات.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+      <div className="relative">
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="ابحث بالعنوان، الجامعة، الوصف أو الكلمات المفتاحية..."
+          className="pr-9"
+        />
+      </div>
 
-          <Card>
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Tag className="w-4 h-4 text-primary" />
-                الوسوم
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-2">
-              <div className="flex flex-wrap gap-2">
-                {tag && (
-                  <Badge
-                    variant="default"
-                    className="cursor-pointer gap-1"
-                    onClick={() => selectTag(null)}
-                  >
-                    {tag}
-                    <X className="w-3 h-3" />
-                  </Badge>
-                )}
-                {facetTags
-                  .filter((t) => t !== tag)
-                  .map((t) => (
-                    <Badge
-                      key={t}
-                      variant="outline"
-                      className="cursor-pointer hover:bg-muted"
-                      onClick={() => selectTag(t)}
-                    >
-                      {t}
-                    </Badge>
-                  ))}
-                {facetTags.length === 0 && !tag && (
-                  <p className="text-xs text-muted-foreground">لا توجد وسوم.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </aside>
-
-        {/* Results */}
-        <div className="lg:col-span-3 space-y-6">
-          {hasActiveFilters && (
-            <div className="flex items-center flex-wrap gap-2 text-sm">
-              <span className="text-muted-foreground">عوامل التصفية:</span>
-              {search && (
-                <Badge variant="secondary" className="gap-1">
-                  بحث: {search}
-                  <X className="w-3 h-3 cursor-pointer" onClick={() => { setSearch(""); setSearchInput(""); resetToFirstPage(); }} />
-                </Badge>
-              )}
-              {category && (
-                <Badge variant="secondary" className="gap-1">
-                  {category}
-                  <X className="w-3 h-3 cursor-pointer" onClick={() => selectCategory(null)} />
-                </Badge>
-              )}
-              {tag && (
-                <Badge variant="secondary" className="gap-1">
-                  {tag}
-                  <X className="w-3 h-3 cursor-pointer" onClick={() => selectTag(null)} />
-                </Badge>
-              )}
-              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={clearAll}>
+      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
+        {/* Filters */}
+        <aside className="space-y-5">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold flex items-center gap-2">
+              <Filter className="w-4 h-4" />
+              تصفية
+            </h2>
+            {(activeFilters.length > 0 || search) && (
+              <button
+                onClick={clearAll}
+                className="text-xs text-primary hover:underline"
+              >
                 مسح الكل
-              </Button>
+              </button>
+            )}
+          </div>
+
+          {activeFilters.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {activeFilters.map(([key, value]) => (
+                <Badge
+                  key={key}
+                  variant="default"
+                  className="gap-1 cursor-pointer"
+                  onClick={() => toggleFilter(key, value)}
+                >
+                  {key === "documentType"
+                    ? documentTypeLabel(value)
+                    : key === "language"
+                      ? languageLabel(value)
+                      : value}
+                  <X className="w-3 h-3" />
+                </Badge>
+              ))}
             </div>
           )}
 
+          {FILTER_GROUPS.map((group) => {
+            const items = (facets?.[group.facet] ?? []) as FacetCount[];
+            if (items.length === 0) return null;
+            return (
+              <div key={group.key} className="space-y-1.5">
+                <h3 className="text-sm font-semibold text-foreground/80">
+                  {group.label}
+                </h3>
+                <div className="space-y-0.5">
+                  {items.map((item) => {
+                    const active = filters[group.key] === item.value;
+                    return (
+                      <button
+                        key={item.value}
+                        onClick={() => toggleFilter(group.key, item.value)}
+                        className={cn(
+                          "w-full flex items-center justify-between text-sm px-2 py-1.5 rounded-md transition-colors text-right",
+                          active
+                            ? "bg-primary text-primary-foreground"
+                            : "hover:bg-muted text-foreground/80",
+                        )}
+                      >
+                        <span className="line-clamp-1">
+                          {group.translate
+                            ? group.translate(item.value)
+                            : item.value}
+                        </span>
+                        <span
+                          className={cn(
+                            "text-xs px-1.5 rounded",
+                            active
+                              ? "bg-primary-foreground/20"
+                              : "text-muted-foreground",
+                          )}
+                        >
+                          {item.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </aside>
+
+        {/* Results */}
+        <div>
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[1, 2, 3, 4].map((i) => (
-                <Card key={i} className="animate-pulse h-56 bg-muted/30" />
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="aspect-[3/4] bg-muted/40 rounded-lg animate-pulse"
+                />
               ))}
-            </div>
-          ) : isError ? (
-            <div className="py-12 text-center text-red-500 font-medium">
-              تعذّر تحميل المكتبة. حاول مرة أخرى.
             </div>
           ) : data && data.items.length > 0 ? (
             <>
-              <div className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground mb-4">
                 {data.total} نتيجة
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
                 {data.items.map((doc) => (
-                  <Link key={doc.id} href={`/library/${doc.id}`}>
-                    <Card className="flex flex-col h-full hover-elevate cursor-pointer hover:border-primary/50 transition-colors">
-                      <CardHeader>
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                            <BookOpen className="w-5 h-5" />
-                          </div>
-                          <div className="flex flex-col items-end gap-1">
-                            <Badge variant="secondary">{doc.documentType}</Badge>
-                            {doc.degreeLevel && (
-                              <Badge variant="outline" className="text-[10px]">{doc.degreeLevel}</Badge>
-                            )}
-                          </div>
-                        </div>
-                        <CardTitle className="text-lg line-clamp-2">{doc.title}</CardTitle>
-                        <CardDescription className="line-clamp-2 mt-2 min-h-[2.5rem]">
-                          {doc.description || "لا يوجد وصف"}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="flex-grow">
-                        <div className="text-sm space-y-1.5 text-muted-foreground">
-                          {doc.university && (
-                            <div className="flex items-center gap-2">
-                              <GraduationCap className="w-4 h-4 shrink-0" />
-                              <span className="truncate">{doc.university}</span>
-                            </div>
-                          )}
-                          {doc.category && (
-                            <div className="flex items-center gap-2">
-                              <Tag className="w-4 h-4 shrink-0" />
-                              <span className="truncate">{doc.category}</span>
-                            </div>
-                          )}
-                        </div>
-                        {doc.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-3">
-                            {doc.tags.slice(0, 4).map((t) => (
-                              <Badge key={t} variant="outline" className="text-[10px]">{t}</Badge>
-                            ))}
-                          </div>
-                        )}
-                      </CardContent>
-                      <CardFooter className="pt-4 border-t bg-muted/10 mt-auto">
-                        <span className="w-full flex items-center justify-between text-sm text-primary font-medium">
-                          عرض المستند
-                          <ArrowLeft className="w-4 h-4" />
-                        </span>
-                      </CardFooter>
-                    </Card>
-                  </Link>
+                  <ResearchCard key={doc.id} doc={doc} />
                 ))}
               </div>
-
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 pt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    className="gap-1"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                    السابق
-                  </Button>
-                  <span className="text-sm text-muted-foreground px-2">
-                    صفحة {page} من {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    className="gap-1"
-                  >
-                    التالي
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                </div>
-              )}
             </>
           ) : (
-            <div className="py-16 text-center">
-              <BookOpen className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
-              <p className="text-muted-foreground">لا توجد مستندات مطابقة لبحثك.</p>
-              {hasActiveFilters && (
-                <Button variant="outline" size="sm" className="mt-4" onClick={clearAll}>
-                  مسح عوامل التصفية
-                </Button>
-              )}
-            </div>
+            <Card className="bg-muted/30 border-dashed">
+              <CardContent className="p-12 text-center">
+                <BookOpen className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+                <h3 className="text-lg font-bold mb-2">لا توجد نتائج</h3>
+                <p className="text-muted-foreground max-w-sm mx-auto">
+                  جرّب تعديل كلمات البحث أو إزالة بعض عوامل التصفية.
+                </p>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>
