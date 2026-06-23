@@ -233,38 +233,61 @@ router.get("/library/:id/export", async (req, res): Promise<void> => {
     return;
   }
 
-  const input = {
-    title: doc.title,
-    richContent: doc.richContent,
-    layoutMetadata: doc.layoutMetadata,
-    formatting: doc.formatting ?? defaultFormatting,
-  };
   const base = doc.title || "document";
-
-  try {
-    if (format === "pdf") {
-      const buffer = await buildPdfFromRich(input);
-      const filename = encodeURIComponent(`${base}.pdf`);
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="${filename}"; filename*=UTF-8''${filename}`,
-      );
-      res.send(buffer);
-      return;
-    }
-
-    const buffer = await buildDocxFromRich(input);
-    const filename = encodeURIComponent(`${base}.docx`);
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    );
+  const sendFile = (
+    buffer: Buffer,
+    ext: "docx" | "pdf",
+    contentType: string,
+  ): void => {
+    const filename = encodeURIComponent(`${base}.${ext}`);
+    res.setHeader("Content-Type", contentType);
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="${filename}"; filename*=UTF-8''${filename}`,
     );
     res.send(buffer);
+  };
+
+  try {
+    // File-first documents own an original file in storage. Export the real
+    // bytes (or a faithful LibreOffice conversion) — never the rich exporters,
+    // whose richContent is empty for these docs and would yield a blank file.
+    if (doc.originalFileUrl) {
+      const { buffer } = await downloadObjectToBuffer(doc.originalFileUrl);
+
+      // PDF originals can only be exported as PDF (there is no DOCX source).
+      if (doc.fileType === "pdf") {
+        if (format === "docx") {
+          res.status(400).json({
+            error: "ملفات PDF متاحة بصيغة PDF فقط",
+          });
+          return;
+        }
+        sendFile(buffer, "pdf", "application/pdf");
+        return;
+      }
+
+      // DOCX originals: serve the original for DOCX, or convert for PDF.
+      if (format === "pdf") {
+        sendFile(await convertDocxToPdf(buffer), "pdf", "application/pdf");
+      } else {
+        sendFile(buffer, "docx", DOCX_MIME);
+      }
+      return;
+    }
+
+    // Legacy documents without a preserved original use the rich pipeline.
+    const input = {
+      title: doc.title,
+      richContent: doc.richContent,
+      layoutMetadata: doc.layoutMetadata,
+      formatting: doc.formatting ?? defaultFormatting,
+    };
+    if (format === "pdf") {
+      sendFile(await buildPdfFromRich(input), "pdf", "application/pdf");
+    } else {
+      sendFile(await buildDocxFromRich(input), "docx", DOCX_MIME);
+    }
   } catch (err) {
     req.log.error({ err, format }, "Failed to export library document");
     res.status(500).json({ error: "تعذّر إنشاء ملف التصدير" });

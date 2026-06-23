@@ -19,6 +19,8 @@ import {
   GraduationCap,
   Building2,
   Filter,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   resolveStorageUrl,
@@ -154,10 +156,13 @@ function ResearchCard({ doc }: { doc: LibraryDocumentSummary }) {
   );
 }
 
+const PAGE_SIZE = 24;
+
 export function Library() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Filters>({});
+  const [page, setPage] = useState(1);
 
   // Debounce keyword input so results update live as the user types.
   useEffect(() => {
@@ -165,17 +170,26 @@ export function Library() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
+  // Any change to the result set resets paging back to the first page.
+  useEffect(() => {
+    setPage(1);
+  }, [search, filters]);
+
   const params = useMemo(
     () => ({
       ...(search ? { search } : {}),
       ...filters,
-      pageSize: 60,
+      page,
+      pageSize: PAGE_SIZE,
     }),
-    [search, filters],
+    [search, filters, page],
   );
 
   const { data, isLoading } = useListLibraryDocuments(params);
   const { data: facets } = useGetLibraryFacets();
+
+  const total = data?.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const activeFilters = Object.entries(filters).filter(([, v]) => v) as [
     keyof Filters,
@@ -320,6 +334,33 @@ export function Library() {
                   <ResearchCard key={doc.id} doc={doc} />
                 ))}
               </div>
+              {pageCount > 1 && (
+                <div className="flex items-center justify-center gap-3 mt-8">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className="gap-1"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                    السابق
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    صفحة {page} من {pageCount}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page >= pageCount}
+                    onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                    className="gap-1"
+                  >
+                    التالي
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
             </>
           ) : (
             <Card className="bg-muted/30 border-dashed">

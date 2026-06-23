@@ -26,6 +26,11 @@ function previewUrl(id: number): string {
   return `${import.meta.env.BASE_URL}api/library/${id}/preview.pdf`;
 }
 
+/** Absolute URL that downloads the document in the requested format. */
+function exportUrl(id: number, format: "docx" | "pdf"): string {
+  return `${import.meta.env.BASE_URL}api/library/${id}/export?format=${format}`;
+}
+
 export function LibraryPreview() {
   const params = useParams();
   const id = Number(params.id);
@@ -133,28 +138,44 @@ export function LibraryPreview() {
             )}
           </div>
         </div>
-        {isPdf ? (
-          <Button asChild size="lg" variant="outline" className="gap-2 shrink-0">
-            <a href={src} target="_blank" rel="noopener noreferrer">
-              <Download className="w-5 h-5" />
-              تنزيل / فتح PDF
-            </a>
-          </Button>
-        ) : (
-          <Button
-            size="lg"
-            onClick={handleUse}
-            disabled={useDoc.isPending}
-            className="gap-2 shrink-0"
-          >
-            {useDoc.isPending ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <FilePlus2 className="w-5 h-5" />
-            )}
-            استخدام هذا المستند
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {isPdf ? (
+            <Button asChild size="lg" variant="outline" className="gap-2">
+              <a href={exportUrl(id, "pdf")}>
+                <Download className="w-5 h-5" />
+                تنزيل PDF
+              </a>
+            </Button>
+          ) : (
+            <>
+              <Button asChild size="lg" variant="outline" className="gap-2">
+                <a href={exportUrl(id, "docx")}>
+                  <Download className="w-5 h-5" />
+                  تنزيل Word
+                </a>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="gap-2">
+                <a href={exportUrl(id, "pdf")}>
+                  <Download className="w-5 h-5" />
+                  تنزيل PDF
+                </a>
+              </Button>
+              <Button
+                size="lg"
+                onClick={handleUse}
+                disabled={useDoc.isPending}
+                className="gap-2"
+              >
+                {useDoc.isPending ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <FilePlus2 className="w-5 h-5" />
+                )}
+                استخدام هذا المستند
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Real-file preview: the original PDF, or the DOCX rendered to PDF by

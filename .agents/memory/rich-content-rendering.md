@@ -5,8 +5,11 @@ description: How rich HTML document content is rendered and exported in the acad
 
 # Rendering library/project rich HTML content
 
-Library documents and projects store rich (TipTap) HTML in `richContent`. The
-reader-facing detail view renders it with `dangerouslySetInnerHTML`.
+Projects store rich (TipTap) HTML in `richContent`, rendered with
+`dangerouslySetInnerHTML`. Note: the reader-facing **library** detail view is
+now file-first (it shows the real document via a PDF iframe, not rich HTML), so
+that specific surface no longer renders `richContent` — but any surface that
+does (project views, future ones) still must sanitize.
 
 **Rule:** Always sanitize `richContent` (e.g. DOMPurify) before rendering it to
 readers.
