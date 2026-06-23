@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import {
   useUpdateProject,
@@ -8,10 +8,50 @@ import type { Project, TemplateParagraph } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Download, Printer, Save, FileText, RefreshCw } from "lucide-react";
+import { PdfPreview } from "@/components/PdfPreview";
+
+/**
+ * Borderless, auto-growing text line that blends into the document sheet so
+ * editing feels like typing inside the real Word document — no field chrome,
+ * no paragraph numbers.
+ */
+function DocLine({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (text: string) => void;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  const resize = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
+
+  useEffect(() => {
+    resize();
+  }, [value, resize]);
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      dir="auto"
+      onChange={(e) => {
+        onChange(e.target.value);
+        resize();
+      }}
+      rows={1}
+      className="w-full resize-none border-0 bg-transparent p-0 leading-loose text-[15px] text-slate-900 outline-none focus:bg-primary/5 focus:ring-0"
+    />
+  );
+}
 
 export function TemplateWorkspace({ project }: { project: Project }) {
   const id = project.id;
@@ -46,6 +86,7 @@ export function TemplateWorkspace({ project }: { project: Project }) {
         onSuccess: () => {
           toast({ title: "تم حفظ التعديلات" });
           queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(id) });
+          // Auto-regenerate the live preview from the freshly saved document.
           setPreviewVersion((v) => v + 1);
         },
         onError: () => {
@@ -101,40 +142,34 @@ export function TemplateWorkspace({ project }: { project: Project }) {
 
       <Card className="border-dashed bg-muted/30">
         <CardContent className="p-4 text-sm text-muted-foreground">
-          هذا المستند يحافظ على التنسيق الأصلي للقالب بالكامل (الخطوط، الهوامش،
-          الجداول، الصور، الرأس والتذييل). عدّل النصوص فقط ثم احفظ لتحديث المعاينة،
-          وسيتم تصدير نسخة مطابقة للأصل مع نصوصك.
+          عدّل النصوص مباشرةً داخل المستند بالأسفل. يحافظ القالب على تنسيقه الأصلي
+          بالكامل (الخطوط، الهوامش، الجداول، الصور، الرأس والتذييل)، وتظهر تعديلاتك
+          في المعاينة الحقيقية فور الحفظ.
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="flex flex-col">
           <CardHeader className="pb-3 border-b">
-            <CardTitle>محرر النصوص</CardTitle>
-            <CardDescription>
-              {paragraphs.length} فقرة قابلة للتعديل
-            </CardDescription>
+            <CardTitle>تحرير المستند</CardTitle>
+            <CardDescription>اكتب داخل الصفحة كما في وورد</CardDescription>
           </CardHeader>
-          <CardContent className="p-4 space-y-4 max-h-[70vh] overflow-auto">
-            {paragraphs.length === 0 && (
+          <CardContent className="p-4 bg-slate-100 max-h-[72vh] overflow-auto">
+            {paragraphs.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
                 لا توجد نصوص قابلة للتعديل في هذا القالب.
               </p>
-            )}
-            {paragraphs.map((p, idx) => (
-              <div key={p.id} className="space-y-1">
-                <label className="text-xs text-muted-foreground">
-                  فقرة {idx + 1}
-                </label>
-                <Textarea
-                  value={p.text}
-                  onChange={(e) => updateText(p.id, e.target.value)}
-                  dir="auto"
-                  rows={Math.min(6, Math.max(1, Math.ceil(p.text.length / 60)))}
-                  className="resize-y leading-loose"
-                />
+            ) : (
+              <div className="mx-auto max-w-[760px] bg-white shadow-md rounded-sm px-12 py-14 space-y-3">
+                {paragraphs.map((p) => (
+                  <DocLine
+                    key={p.id}
+                    value={p.text}
+                    onChange={(text) => updateText(p.id, text)}
+                  />
+                ))}
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
 
@@ -142,7 +177,7 @@ export function TemplateWorkspace({ project }: { project: Project }) {
           <CardHeader className="pb-3 border-b flex-row items-center justify-between space-y-0">
             <div>
               <CardTitle>المعاينة الحية</CardTitle>
-              <CardDescription>عرض حقيقي للمستند (PDF)</CardDescription>
+              <CardDescription>عرض حقيقي للمستند كما سيُصدَّر</CardDescription>
             </div>
             <Button
               variant="ghost"
@@ -151,16 +186,11 @@ export function TemplateWorkspace({ project }: { project: Project }) {
               className="gap-2"
             >
               <RefreshCw className="w-4 h-4" />
-              تحديث
+              تحديث المعاينة
             </Button>
           </CardHeader>
-          <CardContent className="p-0 flex-1">
-            <iframe
-              key={previewVersion}
-              src={previewSrc}
-              title="معاينة المستند"
-              className="w-full h-[70vh] border-0 bg-white"
-            />
+          <CardContent className="p-4 bg-slate-100 max-h-[72vh] overflow-auto">
+            <PdfPreview src={previewSrc} reloadKey={previewVersion} />
           </CardContent>
         </Card>
       </div>
