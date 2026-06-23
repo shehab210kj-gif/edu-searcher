@@ -14,7 +14,10 @@ import {
 import { defaultFormatting } from "../lib/formatting";
 import { buildDocxFromRich, buildPdfFromRich } from "../lib/rich-export";
 import { downloadObjectToBuffer, uploadBuffer } from "../lib/storage";
-import { extractTemplateParagraphs } from "../lib/docx-template";
+import {
+  extractTemplateParagraphs,
+  convertDocxToPdf,
+} from "../lib/docx-template";
 import {
   serializeLibraryDocument,
   serializeLibraryDocumentSummary,
@@ -167,6 +170,44 @@ router.get("/library/:id", async (req, res): Promise<void> => {
   res.json(serializeLibraryDocument(doc));
 });
 
+// Inline preview of the REAL document — never an HTML rendering. PDF originals
+// are streamed as-is; DOCX originals are rendered to PDF by headless LibreOffice
+// so fonts, layout, RTL, headers/footers, images and tables are preserved.
+router.get("/library/:id/preview.pdf", async (req, res): Promise<void> => {
+  const params = GetLibraryDocumentParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [doc] = await db
+    .select()
+    .from(libraryDocumentsTable)
+    .where(and(eq(libraryDocumentsTable.id, params.data.id), PUBLISHED));
+  if (!doc) {
+    res.status(404).json({ error: "المستند غير موجود" });
+    return;
+  }
+  if (!doc.originalFileUrl) {
+    res.status(404).json({ error: "لا تتوفر معاينة لهذا المستند" });
+    return;
+  }
+
+  try {
+    const { buffer } = await downloadObjectToBuffer(doc.originalFileUrl);
+    const pdf =
+      doc.fileType === "pdf" ? buffer : await convertDocxToPdf(buffer);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", "inline");
+    res.send(pdf);
+  } catch (err) {
+    req.log.error(
+      { err, libraryDocumentId: doc.id },
+      "Failed to render library preview",
+    );
+    res.status(500).json({ error: "تعذّر إنشاء المعاينة" });
+  }
+});
+
 router.get("/library/:id/export", async (req, res): Promise<void> => {
   const params = GetLibraryDocumentParams.safeParse(req.params);
   if (!params.success) {
@@ -242,6 +283,15 @@ router.post("/library/:id/use", async (req, res): Promise<void> => {
     .where(and(eq(libraryDocumentsTable.id, params.data.id), PUBLISHED));
   if (!doc) {
     res.status(404).json({ error: "المستند غير موجود" });
+    return;
+  }
+
+  // PDF documents are reference/preview-only — they cannot be turned into an
+  // editable project (the text-node editing pipeline is DOCX-only).
+  if (doc.fileType === "pdf") {
+    res.status(400).json({
+      error: "ملفات PDF متاحة للمعاينة فقط ولا يمكن استخدامها كقالب قابل للتحرير",
+    });
     return;
   }
 

@@ -980,6 +980,8 @@ components:
         tags:
           type: array
           items: { type: string }
+        fileType: { type: string }
+        pageCount: { type: ["integer", "null"] }
         originalFileName: { type: ["string", "null"] }
         originalFileUrl: { type: ["string", "null"] }
         richContent: { type: string }
@@ -999,6 +1001,7 @@ components:
         - documentType
         - language
         - tags
+        - fileType
         - richContent
         - layoutMetadata
         - status
@@ -1021,6 +1024,8 @@ components:
         tags:
           type: array
           items: { type: string }
+        fileType: { type: string }
+        pageCount: { type: ["integer", "null"] }
         status: { type: string }
         createdAt: { type: string }
         updatedAt: { type: string }
@@ -1031,6 +1036,7 @@ components:
         - documentType
         - language
         - tags
+        - fileType
         - status
         - createdAt
         - updatedAt

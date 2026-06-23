@@ -17,7 +17,7 @@ import {
   adminPasswordConfigured,
   sessionSecretConfigured,
 } from "../lib/admin-auth";
-import { parseDocxToRich } from "../lib/documents";
+import { extractPdfMetadata } from "../lib/documents";
 import { uploadBuffer } from "../lib/storage";
 import {
   serializeLibraryDocument,
@@ -33,6 +33,7 @@ const upload = multer({
 
 const DOCX_MIME =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const PDF_MIME = "application/pdf";
 
 router.post("/admin/login", async (req, res): Promise<void> => {
   if (!adminPasswordConfigured() || !sessionSecretConfigured()) {
@@ -66,20 +67,55 @@ router.post(
       return;
     }
     const name = req.file.originalname.toLowerCase();
-    if (!name.endsWith(".docx") && req.file.mimetype !== DOCX_MIME) {
-      res.status(400).json({ error: "يجب رفع ملف Word بصيغة .docx" });
+    const isDocx = name.endsWith(".docx") || req.file.mimetype === DOCX_MIME;
+    const isPdf = name.endsWith(".pdf") || req.file.mimetype === PDF_MIME;
+    if (!isDocx && !isPdf) {
+      res.status(400).json({ error: "يجب رفع ملف Word (.docx) أو PDF" });
       return;
     }
 
     try {
-      const parsed = await parseDocxToRich(req.file.buffer);
-      const originalFileUrl = await uploadBuffer(req.file.buffer, DOCX_MIME);
+      // File-first import: the original is stored unchanged and templates are
+      // NEVER converted to HTML. DOCX is previewed/edited via the TEMPLATE
+      // pipeline (LibreOffice + text-node edits); PDF is stored and previewed
+      // as-is, with only lightweight metadata extracted.
+      const fileType = isPdf ? "pdf" : "docx";
+      const mime = isPdf ? PDF_MIME : DOCX_MIME;
+      const originalFileUrl = await uploadBuffer(req.file.buffer, mime);
+
+      let pageCount: number | null = null;
+      let extractedTitle = "";
+      if (isPdf) {
+        const meta = await extractPdfMetadata(req.file.buffer);
+        pageCount = meta.pageCount;
+        extractedTitle = meta.title;
+      }
 
       const body = req.body as Record<string, string | undefined>;
       const tags = (body.tags ?? "")
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean);
+
+      const values = {
+        title: body.title?.trim() || extractedTitle || req.file.originalname,
+        description: body.description?.trim() ?? "",
+        documentType: body.documentType?.trim() || "master_template",
+        coverImageUrl: body.coverImageUrl?.trim() || null,
+        university: body.university?.trim() || null,
+        degreeLevel: body.degreeLevel?.trim() || null,
+        department: body.department?.trim() || null,
+        category: body.category?.trim() || null,
+        language: body.language?.trim() || "ar",
+        tags,
+        fileType,
+        pageCount,
+        originalFileName: req.file.originalname,
+        originalFileUrl,
+        richContent: "",
+        layoutMetadata: {},
+        status: body.status?.trim() || "published",
+      };
 
       const replaceId = body.id ? Number.parseInt(body.id, 10) : NaN;
 
@@ -88,23 +124,7 @@ router.post(
       if (Number.isInteger(replaceId)) {
         const [doc] = await db
           .update(libraryDocumentsTable)
-          .set({
-            title: body.title?.trim() || parsed.title || req.file.originalname,
-            description: body.description?.trim() ?? "",
-            documentType: body.documentType?.trim() || "master_template",
-            coverImageUrl: body.coverImageUrl?.trim() || null,
-            university: body.university?.trim() || null,
-            degreeLevel: body.degreeLevel?.trim() || null,
-            department: body.department?.trim() || null,
-            category: body.category?.trim() || null,
-            language: body.language?.trim() || "ar",
-            tags,
-            originalFileName: req.file.originalname,
-            originalFileUrl,
-            richContent: parsed.html,
-            layoutMetadata: parsed.layout,
-            status: body.status?.trim() || "published",
-          })
+          .set(values)
           .where(eq(libraryDocumentsTable.id, replaceId))
           .returning();
 
@@ -118,23 +138,7 @@ router.post(
 
       const [doc] = await db
         .insert(libraryDocumentsTable)
-        .values({
-          title: body.title?.trim() || parsed.title || req.file.originalname,
-          description: body.description?.trim() ?? "",
-          documentType: body.documentType?.trim() || "master_template",
-          coverImageUrl: body.coverImageUrl?.trim() || null,
-          university: body.university?.trim() || null,
-          degreeLevel: body.degreeLevel?.trim() || null,
-          department: body.department?.trim() || null,
-          category: body.category?.trim() || null,
-          language: body.language?.trim() || "ar",
-          tags,
-          originalFileName: req.file.originalname,
-          originalFileUrl,
-          richContent: parsed.html,
-          layoutMetadata: parsed.layout,
-          status: body.status?.trim() || "published",
-        })
+        .values(values)
         .returning();
 
       res.status(201).json(serializeLibraryDocument(doc));

@@ -1,2 +1,3 @@
 - [Rich content rendering](rich-content-rendering.md) — library/project richContent is HTML rendered via dangerouslySetInnerHTML; always sanitize on render even though it's admin-authored.
 - [DOCX TEMPLATE mode](docx-template-mode.md) — TEMPLATE projects clone the original DOCX + regex-edit only `<w:t>` nodes + LibreOffice PDF; never mix with the AI engine; never use an XML reserializer.
+- [PDF library handling](pdf-handling.md) — uploaded PDFs are file-first (stored/previewed as-is); keep pdf-parse/pdfjs-dist esbuild-external or pdf.js worker fails and pageCount silently goes null.

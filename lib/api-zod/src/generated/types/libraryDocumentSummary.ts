@@ -23,6 +23,9 @@ export interface LibraryDocumentSummary {
   category?: string | null;
   language: string;
   tags: string[];
+  fileType: string;
+  /** @nullable */
+  pageCount?: number | null;
   status: string;
   createdAt: string;
   updatedAt: string;

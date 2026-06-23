@@ -138,12 +138,16 @@ function ResearchCard({ doc }: { doc: LibraryDocumentSummary }) {
               معاينة
             </Button>
           </Link>
-          <Link href={`/library/${doc.id}?use=1`} className="flex-1">
-            <Button size="sm" className="w-full gap-1.5">
-              <FilePlus2 className="w-4 h-4" />
-              استخدام
-            </Button>
-          </Link>
+          {/* PDF documents are preview-only — they can't become editable
+              projects, so the "use" action is hidden for them. */}
+          {doc.fileType !== "pdf" && (
+            <Link href={`/library/${doc.id}?use=1`} className="flex-1">
+              <Button size="sm" className="w-full gap-1.5">
+                <FilePlus2 className="w-4 h-4" />
+                استخدام
+              </Button>
+            </Link>
+          )}
         </div>
       </CardContent>
     </Card>

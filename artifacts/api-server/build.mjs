@@ -100,6 +100,12 @@ async function buildAll() {
       "puppeteer",
       "puppeteer-core",
       "electron",
+      // pdf-parse bundles pdf.js, which dynamically imports its worker
+      // (pdf.worker.mjs) and optional native canvas at runtime. Bundling breaks
+      // that relative resolution, so keep it external and require it from
+      // node_modules where the sibling worker file exists.
+      "pdf-parse",
+      "pdfjs-dist",
     ],
     sourcemap: "linked",
     loader: { ".ttf": "base64" },

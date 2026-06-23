@@ -44,6 +44,15 @@ export const libraryDocumentsTable = pgTable("library_documents", {
   tags: jsonb("tags").$type<string[]>().notNull().default([]),
   originalFileName: text("original_file_name"),
   originalFileUrl: text("original_file_url"),
+  /**
+   * Source file kind. "docx": original Word file, previewed via LibreOffice
+   * (DOCX→PDF) and usable as an editable TEMPLATE. "pdf": original PDF, served
+   * and previewed directly (reference-only, not editable). Originals are stored
+   * unchanged in object storage; templates are never converted to HTML.
+   */
+  fileType: text("file_type").notNull().default("docx"),
+  /** Page count extracted from PDF metadata (PDF docs only). */
+  pageCount: integer("page_count"),
   richContent: text("rich_content").notNull().default(""),
   layoutMetadata: jsonb("layout_metadata")
     .$type<LayoutMetadata>()

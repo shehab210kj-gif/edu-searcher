@@ -1,13 +1,11 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
-import DOMPurify from "dompurify";
 import {
   useGetLibraryDocument,
   useUseLibraryDocument,
   getListProjectsQueryKey,
   getGetStatsQueryKey,
-  type LibraryDocument,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,103 +14,16 @@ import {
   ArrowRight,
   FilePlus2,
   Loader2,
-  ListTree,
+  Download,
   FileText,
   Building2,
   GraduationCap,
 } from "lucide-react";
-import {
-  resolveStorageUrl,
-  documentTypeLabel,
-  languageLabel,
-} from "@/lib/library";
+import { documentTypeLabel, languageLabel } from "@/lib/library";
 
-interface Heading {
-  id: string;
-  text: string;
-  level: number;
-}
-
-/** Rewrite storage-backed <img> src values to proxy URLs and collect headings. */
-function processRichContent(html: string): { html: string; headings: Heading[] } {
-  if (typeof window === "undefined") return { html, headings: [] };
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
-
-  doc.querySelectorAll("img").forEach((img) => {
-    const src = img.getAttribute("src");
-    const resolved = resolveStorageUrl(src);
-    if (resolved) img.setAttribute("src", resolved);
-  });
-
-  const headings: Heading[] = [];
-  doc.querySelectorAll("h1, h2, h3").forEach((el, i) => {
-    const text = el.textContent?.trim();
-    if (!text) return;
-    const id = `sec-${i}`;
-    el.setAttribute("id", id);
-    headings.push({
-      id,
-      text,
-      level: Number(el.tagName.substring(1)),
-    });
-  });
-
-  // Sanitize the admin-authored HTML before it is injected via
-  // dangerouslySetInnerHTML — this is a reader-facing route, so never trust
-  // stored content even though it originates from the admin tools.
-  return { html: DOMPurify.sanitize(doc.body.innerHTML), headings };
-}
-
-function CoverPage({ doc }: { doc: LibraryDocument }) {
-  const layout = doc.layoutMetadata ?? {};
-  const cover = layout.cover;
-  const logo = resolveStorageUrl(cover?.logoUrl);
-
-  if (layout.coverPageHtml && layout.coverPageHtml.trim()) {
-    const html = processRichContent(layout.coverPageHtml).html;
-    return (
-      <div
-        className="doc-cover doc-body"
-        dir="rtl"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-    );
-  }
-
-  return (
-    <div className="doc-cover flex flex-col items-center text-center justify-between py-8 gap-8">
-      <div className="space-y-2">
-        {cover?.university && (
-          <p className="text-lg font-bold">{cover.university}</p>
-        )}
-        {cover?.faculty && <p className="text-base">{cover.faculty}</p>}
-        {cover?.department && (
-          <p className="text-base">{cover.department}</p>
-        )}
-      </div>
-
-      {logo && (
-        <img src={logo} alt="" className="w-24 h-24 object-contain" />
-      )}
-
-      <div className="space-y-4 max-w-xl">
-        <h1 className="text-3xl font-bold leading-relaxed">
-          {cover?.title || doc.title}
-        </h1>
-        {cover?.subtitle && (
-          <p className="text-xl text-gray-700">{cover.subtitle}</p>
-        )}
-      </div>
-
-      <div className="space-y-1 text-base">
-        {cover?.studentName && <p>إعداد: {cover.studentName}</p>}
-        {cover?.supervisor && <p>إشراف: {cover.supervisor}</p>}
-        {cover?.degree && <p>{cover.degree}</p>}
-        {cover?.year && <p className="font-bold mt-2">{cover.year}</p>}
-      </div>
-    </div>
-  );
+/** Absolute URL of the inline PDF preview for a library document. */
+function previewUrl(id: number): string {
+  return `${import.meta.env.BASE_URL}api/library/${id}/preview.pdf`;
 }
 
 export function LibraryPreview() {
@@ -126,12 +37,7 @@ export function LibraryPreview() {
   const { data: doc, isLoading, isError } = useGetLibraryDocument(id);
   const useDoc = useUseLibraryDocument();
 
-  const processed = useMemo(
-    () => (doc ? processRichContent(doc.richContent) : { html: "", headings: [] }),
-    [doc],
-  );
-
-  const isLandscape = doc?.layoutMetadata?.pageSetup?.orientation === "landscape";
+  const isPdf = doc?.fileType === "pdf";
 
   const handleUse = () => {
     if (useDoc.isPending) return;
@@ -155,13 +61,15 @@ export function LibraryPreview() {
     );
   };
 
-  // Honor a `?use=1` deep-link (from the library card "use" button).
+  // Honor a `?use=1` deep-link (from the library card "use" button). PDF
+  // documents are preview-only, so the deep-link is ignored for them.
   useEffect(() => {
-    if (autoUsed.current) return;
+    if (autoUsed.current || !doc) return;
+    if (doc.fileType === "pdf") return;
     const search = location.includes("?")
       ? location.slice(location.indexOf("?"))
       : window.location.search;
-    if (doc && new URLSearchParams(search).get("use") === "1") {
+    if (new URLSearchParams(search).get("use") === "1") {
       autoUsed.current = true;
       handleUse();
     }
@@ -189,6 +97,8 @@ export function LibraryPreview() {
     );
   }
 
+  const src = previewUrl(id);
+
   return (
     <div className="fade-in-up">
       {/* Header / actions */}
@@ -204,6 +114,7 @@ export function LibraryPreview() {
           <h1 className="text-2xl font-bold">{doc.title}</h1>
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <Badge variant="secondary">{documentTypeLabel(doc.documentType)}</Badge>
+            {isPdf && <Badge variant="outline">PDF</Badge>}
             {doc.university && (
               <span className="flex items-center gap-1">
                 <Building2 className="w-3.5 h-3.5" />
@@ -217,104 +128,63 @@ export function LibraryPreview() {
               </span>
             )}
             <span>{languageLabel(doc.language)}</span>
+            {isPdf && doc.pageCount != null && (
+              <span>{doc.pageCount} صفحة</span>
+            )}
           </div>
         </div>
-        <Button
-          size="lg"
-          onClick={handleUse}
-          disabled={useDoc.isPending}
-          className="gap-2 shrink-0"
-        >
-          {useDoc.isPending ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <FilePlus2 className="w-5 h-5" />
-          )}
-          استخدام هذا المستند
-        </Button>
+        {isPdf ? (
+          <Button asChild size="lg" variant="outline" className="gap-2 shrink-0">
+            <a href={src} target="_blank" rel="noopener noreferrer">
+              <Download className="w-5 h-5" />
+              تنزيل / فتح PDF
+            </a>
+          </Button>
+        ) : (
+          <Button
+            size="lg"
+            onClick={handleUse}
+            disabled={useDoc.isPending}
+            className="gap-2 shrink-0"
+          >
+            {useDoc.isPending ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <FilePlus2 className="w-5 h-5" />
+            )}
+            استخدام هذا المستند
+          </Button>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
-        {/* Sidebar: thumbnails + table of contents */}
-        <aside className="space-y-6 lg:sticky lg:top-6 self-start">
-          <div className="space-y-2">
-            <h2 className="text-sm font-semibold flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              الصفحات
-            </h2>
-            <div className="border rounded-lg overflow-hidden bg-muted/40 aspect-[3/4] relative">
-              <div
-                className="doc-thumb absolute top-0 right-0"
-                style={{ width: 794, transform: "scale(0.29)" }}
-              >
-                <div className="doc-page" style={{ boxShadow: "none" }}>
-                  <CoverPage doc={doc} />
-                </div>
-              </div>
-              <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[10px] bg-background/80 px-2 py-0.5 rounded">
-                صفحة الغلاف
-              </span>
-            </div>
-          </div>
+      {/* Real-file preview: the original PDF, or the DOCX rendered to PDF by
+          LibreOffice on the server. No HTML conversion, so fonts, layout, RTL,
+          headers/footers, images and tables are preserved exactly. */}
+      <div className="bg-muted/30 rounded-xl p-2 md:p-4">
+        <iframe
+          src={src}
+          title={doc.title}
+          className="w-full h-[80vh] rounded-lg border bg-white"
+        />
+      </div>
 
-          {processed.headings.length > 0 && (
-            <div className="space-y-2">
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <ListTree className="w-4 h-4" />
-                جدول المحتويات
-              </h2>
-              <nav className="space-y-0.5 max-h-[50vh] overflow-auto pl-1">
-                {processed.headings.map((h) => (
-                  <a
-                    key={h.id}
-                    href={`#${h.id}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      document
-                        .getElementById(h.id)
-                        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-                    }}
-                    className="block text-sm text-foreground/70 hover:text-primary truncate py-0.5"
-                    style={{ paddingRight: `${(h.level - 1) * 12}px` }}
-                  >
-                    {h.text}
-                  </a>
-                ))}
-              </nav>
-            </div>
-          )}
-        </aside>
-
-        {/* Document pages */}
-        <div className="space-y-8 bg-muted/30 rounded-xl p-4 md:p-8 overflow-x-auto">
-          <div className={`doc-page ${isLandscape ? "landscape" : ""}`}>
-            <CoverPage doc={doc} />
-          </div>
-          <div className={`doc-page ${isLandscape ? "landscape" : ""}`}>
-            <div
-              className="doc-body"
-              dir="rtl"
-              dangerouslySetInnerHTML={{ __html: processed.html }}
-            />
-          </div>
-
-          <div className="text-center pt-2">
-            <Button
-              size="lg"
-              onClick={handleUse}
-              disabled={useDoc.isPending}
-              className="gap-2"
-            >
-              {useDoc.isPending ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <FilePlus2 className="w-5 h-5" />
-              )}
-              استخدام هذا المستند والبدء في التحرير
-            </Button>
-          </div>
+      {!isPdf && (
+        <div className="text-center pt-6">
+          <Button
+            size="lg"
+            onClick={handleUse}
+            disabled={useDoc.isPending}
+            className="gap-2"
+          >
+            {useDoc.isPending ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <FilePlus2 className="w-5 h-5" />
+            )}
+            استخدام هذا المستند والبدء في التحرير
+          </Button>
         </div>
-      </div>
+      )}
     </div>
   );
 }

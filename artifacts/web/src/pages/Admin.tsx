@@ -367,7 +367,7 @@ function UploadForm({ onDone }: { onDone: () => void }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) {
-      toast({ title: "الرجاء اختيار ملف Word", variant: "destructive" });
+      toast({ title: "الرجاء اختيار ملف Word أو PDF", variant: "destructive" });
       return;
     }
     setSubmitting(true);
@@ -393,13 +393,14 @@ function UploadForm({ onDone }: { onDone: () => void }) {
       <CardHeader>
         <CardTitle>إضافة مستند جديد</CardTitle>
         <CardDescription>
-          ارفع ملف Word (.docx) مع بياناته الوصفية لإضافته إلى المكتبة.
+          ارفع ملف Word (.docx) أو PDF (.pdf) مع بياناته الوصفية لإضافته إلى
+          المكتبة.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-5">
           <div className="space-y-1.5">
-            <Label>ملف Word (.docx)</Label>
+            <Label>ملف Word (.docx) أو PDF (.pdf)</Label>
             <div className="flex items-center gap-3">
               <Label
                 htmlFor="docx-pick"
@@ -411,7 +412,7 @@ function UploadForm({ onDone }: { onDone: () => void }) {
               <Input
                 id="docx-pick"
                 type="file"
-                accept=".docx"
+                accept=".docx,.pdf"
                 className="hidden"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
@@ -525,7 +526,7 @@ function EditDialog({
           <div className="space-y-1.5 border-t pt-4">
             <Label className="flex items-center gap-2">
               <RefreshCw className="w-4 h-4" />
-              استبدال ملف Word (اختياري)
+              استبدال الملف Word/PDF (اختياري)
             </Label>
             <div className="flex items-center gap-3">
               <Label
@@ -538,7 +539,7 @@ function EditDialog({
               <Input
                 id="replace-pick"
                 type="file"
-                accept=".docx"
+                accept=".docx,.pdf"
                 className="hidden"
                 onChange={(e) => setReplaceFile(e.target.files?.[0] ?? null)}
               />

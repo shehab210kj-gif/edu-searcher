@@ -25,6 +25,9 @@ export interface LibraryDocument {
   category?: string | null;
   language: string;
   tags: string[];
+  fileType: string;
+  /** @nullable */
+  pageCount?: number | null;
   /** @nullable */
   originalFileName?: string | null;
   /** @nullable */
