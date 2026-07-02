@@ -396,6 +396,17 @@ export interface CreateVersionInput {
   label?: string;
 }
 
+export interface SmartSearchResultItem {
+  documentId: number;
+  similarityScore: number;
+  explanation: string;
+  document: LibraryDocumentSummary;
+}
+
+export interface SmartSearchResponse {
+  results: SmartSearchResultItem[];
+}
+
 /**
  * Not found
  */
@@ -424,5 +435,20 @@ page?: number;
  * @maximum 100
  */
 pageSize?: number;
+};
+
+export type UploadLibraryDocumentBody = {
+  file: Blob;
+  title?: string;
+  description?: string;
+  university?: string;
+  degreeLevel?: string;
+  department?: string;
+  category?: string;
+  tags?: string;
+};
+
+export type SmartSearchLibraryBody = {
+  file: Blob;
 };
 

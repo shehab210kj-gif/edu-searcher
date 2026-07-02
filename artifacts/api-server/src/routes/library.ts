@@ -1,5 +1,7 @@
 import { Router, type IRouter } from "express";
+import multer from "multer";
 import { and, eq, or, ilike, desc, sql } from "drizzle-orm";
+import { z } from "zod/v4";
 import {
   db,
   libraryDocumentsTable,
@@ -24,9 +26,12 @@ import {
   serializeLibraryCategory,
   serializeProject,
 } from "../lib/serialize";
+import { parseDocument, extractPdfMetadata, parseDocxToRich } from "../lib/documents";
+import { gemini, GEMINI_MODEL, chatStructured } from "../lib/gemini";
 
 const DOCX_MIME =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const PDF_MIME = "application/pdf";
 
 const router: IRouter = Router();
 
@@ -53,7 +58,7 @@ router.get("/library", async (req, res): Promise<void> => {
   if (q.language) conditions.push(eq(libraryDocumentsTable.language, q.language));
   if (q.tag) {
     conditions.push(
-      sql`${libraryDocumentsTable.tags}::jsonb @> ${JSON.stringify([q.tag])}::jsonb`,
+      sql`${q.tag} = ANY(${libraryDocumentsTable.tags})`,
     );
   }
   if (q.search) {
@@ -121,7 +126,7 @@ router.get("/library/facets", async (_req, res): Promise<void> => {
       })
       .from(libraryDocumentsTable)
       .innerJoin(
-        sql`jsonb_array_elements_text(${libraryDocumentsTable.tags}::jsonb) as tag(value)`,
+        sql`unnest(${libraryDocumentsTable.tags}) as tag(value)`,
         sql`true`,
       )
       .where(and(PUBLISHED, sql`tag.value <> ''`))
@@ -318,13 +323,9 @@ router.post("/library/:id/use", async (req, res): Promise<void> => {
     return;
   }
 
-  // TEMPLATE mode: when the original DOCX is preserved in storage, clone it so
-  // the project owns an immutable copy, and extract its editable text. Export
-  // later swaps only the edited text nodes — fonts, layout, RTL, headers,
-  // footers, images and tables are preserved exactly. If the original exists but
-  // cloning fails, surface the error instead of silently producing an AI-mode
-  // project, so fidelity failures stay visible.
-  if (doc.originalFileUrl) {
+  // TEMPLATE mode: when the original DOCX is preserved in storage and this document
+  // is flagged as a template, clone it so the project owns an immutable copy.
+  if (doc.isTemplate && doc.originalFileUrl) {
     try {
       const { buffer } = await downloadObjectToBuffer(doc.originalFileUrl);
       const templateFileUrl = await uploadBuffer(buffer, DOCX_MIME);
@@ -375,5 +376,246 @@ router.post("/library/:id/use", async (req, res): Promise<void> => {
 
   res.status(201).json(serializeProject(project));
 });
+
+// Configure multer for memory storage uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 },
+});
+
+// 1. User-facing research document upload
+router.post(
+  "/library/upload",
+  upload.single("file"),
+  async (req, res): Promise<void> => {
+    if (!req.file) {
+      res.status(400).json({ error: "لم يتم رفع أي ملف" });
+      return;
+    }
+    const name = req.file.originalname.toLowerCase();
+    const isDocx = name.endsWith(".docx") || req.file.mimetype === DOCX_MIME;
+    const isPdf = name.endsWith(".pdf") || req.file.mimetype === PDF_MIME;
+    if (!isDocx && !isPdf) {
+      res.status(400).json({ error: "يجب رفع ملف Word (.docx) أو PDF" });
+      return;
+    }
+
+    try {
+      const fileType = isPdf ? "pdf" : "docx";
+      const mime = isPdf ? PDF_MIME : DOCX_MIME;
+      const originalFileUrl = await uploadBuffer(req.file.buffer, mime);
+
+      let pageCount: number | null = null;
+      let extractedTitle = "";
+      let richContent = "";
+      let layoutMetadata = {};
+
+      if (isPdf) {
+        const meta = await extractPdfMetadata(req.file.buffer);
+        pageCount = meta.pageCount;
+        extractedTitle = meta.title;
+      } else if (isDocx) {
+        try {
+          const parsed = await parseDocxToRich(req.file.buffer);
+          richContent = parsed.html;
+          layoutMetadata = parsed.layout;
+          if (parsed.title) {
+            extractedTitle = parsed.title;
+          }
+        } catch (err) {
+          req.log.warn({ err }, "Failed to extract rich content from user uploaded DOCX");
+        }
+      }
+
+      const body = req.body as Record<string, string | undefined>;
+      const tags = (body.tags ?? "")
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+
+      const values = {
+        title: body.title?.trim() || extractedTitle || req.file.originalname,
+        description: body.description?.trim() ?? "بحث قديم مرفوع من قبل المستخدم",
+        documentType: "previous_research",
+        workType: body.workType?.trim() || "research",
+        coverImageUrl: body.coverImageUrl?.trim() || null,
+        university: body.university?.trim() || null,
+        degreeLevel: body.degreeLevel?.trim() || null,
+        department: body.department?.trim() || null,
+        category: body.category?.trim() || null,
+        language: body.language?.trim() || "ar",
+        tags,
+        fileType,
+        pageCount,
+        originalFileName: req.file.originalname,
+        originalFileUrl,
+        richContent,
+        layoutMetadata,
+        isTemplate: false,
+        status: "published",
+      };
+
+      const [doc] = await db
+        .insert(libraryDocumentsTable)
+        .values(values)
+        .returning();
+
+      res.status(201).json(serializeLibraryDocument(doc));
+    } catch (err) {
+      req.log.error({ err }, "Failed to upload user library document");
+      res.status(400).json({ error: "تعذّر معالجة الملف المرفوع وحفظه" });
+    }
+  }
+);
+
+// 2. AI-powered smart search comparison
+router.post(
+  "/library/smart-search",
+  upload.single("file"),
+  async (req, res): Promise<void> => {
+    if (!req.file) {
+      res.status(400).json({ error: "لم يتم رفع أي ملف تكليف للمطابقة" });
+      return;
+    }
+
+    try {
+      let extractedText = "";
+      const name = req.file.originalname.toLowerCase();
+      const isImage = name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".webp");
+
+      if (isImage) {
+        if (!gemini) {
+          res.status(503).json({ error: "خدمة الذكاء الاصطناعي غير متوفرة حالياً" });
+          return;
+        }
+        req.log.info("Performing multimodal OCR on uploaded image requirements");
+        const aiRes = await gemini.models.generateContent({
+          model: GEMINI_MODEL,
+          contents: [
+            {
+              inlineData: {
+                data: req.file.buffer.toString("base64"),
+                mimeType: req.file.mimetype,
+              },
+            },
+            "قم بقراءة واستخراج المطلوب والتعليمات الدراسية والتكليفية من هذه الصورة بالتفصيل."
+          ]
+        });
+        extractedText = aiRes.text ?? "";
+      } else {
+        extractedText = await parseDocument(req.file.buffer, req.file.originalname, req.file.mimetype);
+      }
+
+      if (!extractedText.trim()) {
+        res.status(400).json({ error: "لم يتم العثور على أي نص مقروء في الملف المرفوع" });
+        return;
+      }
+
+      // Fetch all library documents (master templates & previous research) to match against
+      const allDocs = await db.select().from(libraryDocumentsTable);
+      if (allDocs.length === 0) {
+        res.json({ results: [] });
+        return;
+      }
+
+      const docList = allDocs.map((d) => ({
+        id: d.id,
+        title: d.title,
+        description: d.description,
+        university: d.university,
+        department: d.department,
+        category: d.category,
+      }));
+
+      const systemPrompt = `أنت خبير أكاديمي ذكي ومساعد باحث. مهمتك هي قراءة متطلبات التكليف/البحث الدراسي ومقارنتها بقائمة الأبحاث السابقة المنجزة في قاعدة البيانات لتحديد نسبة التطابق والتشابه ومدى ملاءمة إعادة استخدام أي منها وتعديله.`;
+      const userPrompt = `
+متطلبات التكليف الدراسي المستخرجة:
+\"\"\"
+${extractedText}
+\"\"\"
+
+قائمة البحوث المنجزة سابقاً في المكتبة:
+${JSON.stringify(docList, null, 2)}
+
+قم بتحليل مدى التطابق أو إمكانية إعادة الاستخدام لكل مستند في القائمة.
+يجب أن تعيد الإجابة كـ JSON array من الكائنات، بحيث يحتوي كل كائن على:
+1. "documentId" (رقم): معرف المستند من القائمة.
+2. "similarityScore" (رقم من 0 إلى 100): نسبة التطابق والتشابه والملائمة للتكليف الجديد.
+3. "explanation" (نص): مبرر علمي دقيق باللغة العربية لنسبة التشابه وكيف يمكن تعديله أو الاستفادة منه للتكليف.
+
+ملاحظة: تضمن فقط الأبحاث التي تشهد تشابهاً أو فائدة (Similarity > 0). رتب النتائج تنازلياً حسب النسبة.`;
+
+      const MatchResultSchema = z.object({
+        documentId: z.number(),
+        similarityScore: z.number(),
+        explanation: z.string(),
+      });
+      const MatchResultsSchema = z.array(MatchResultSchema);
+
+      const matches = await chatStructured(systemPrompt, userPrompt, MatchResultsSchema);
+
+      const results = matches
+        .map((m) => {
+          const doc = allDocs.find((d) => d.id === m.documentId);
+          return {
+            ...m,
+            document: doc ? serializeLibraryDocumentSummary(doc) : null,
+          };
+        })
+        .filter((r) => r.document !== null && r.similarityScore > 0);
+
+      res.json({ results });
+    } catch (err) {
+      req.log.error({ err }, "Smart search failed");
+      res.status(500).json({ error: "حدث خطأ أثناء معالجة ومطابقة التكليف ذكياً" });
+    }
+  }
+);
+
+// 3. Save finished project to library
+router.post(
+  "/projects/:id/save-to-library",
+  async (req, res): Promise<void> => {
+    const projectId = parseInt(req.params.id, 10);
+    if (isNaN(projectId)) {
+      res.status(400).json({ error: "معرف المشروع غير صحيح" });
+      return;
+    }
+
+    try {
+      const [project] = await db
+        .select()
+        .from(projectsTable)
+        .where(eq(projectsTable.id, projectId));
+
+      if (!project) {
+        res.status(404).json({ error: "المشروع غير موجود" });
+        return;
+      }
+
+      // Insert as previous research document in library
+      const [doc] = await db
+        .insert(libraryDocumentsTable)
+        .values({
+          title: project.title,
+          description: project.analysis?.summary || `بحث منجز عبر المنصة: ${project.title}`,
+          documentType: "previous_research",
+          workType: project.workType || "research",
+          fileType: "docx",
+          richContent: project.richContent ?? "",
+          layoutMetadata: project.layoutMetadata ?? {},
+          formatting: project.formatting,
+          isTemplate: false,
+          status: "published",
+        })
+        .returning();
+
+      res.status(201).json(serializeLibraryDocument(doc));
+    } catch (err) {
+      req.log.error({ err, projectId }, "Failed to save project to library");
+      res.status(500).json({ error: "تعذّر حفظ المشروع في المكتبة البحثية" });
+    }
+  }
+);
 
 export default router;

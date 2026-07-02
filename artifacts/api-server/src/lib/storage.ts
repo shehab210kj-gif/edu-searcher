@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { objectStorageClient, ObjectStorageService } from "./objectStorage";
+import fs from "node:fs";
+import path from "node:path";
+import { objectStorageClient, ObjectStorageService, isLocal, LOCAL_STORAGE_DIR } from "./objectStorage";
 
 const service = new ObjectStorageService();
 
@@ -22,6 +24,14 @@ export async function uploadBuffer(
   buffer: Buffer,
   contentType: string,
 ): Promise<string> {
+  if (isLocal) {
+    const id = randomUUID();
+    const filePath = path.join(LOCAL_STORAGE_DIR, id);
+    await fs.promises.writeFile(filePath, buffer);
+    await fs.promises.writeFile(`${filePath}.meta`, JSON.stringify({ contentType }));
+    return `/objects/uploads/${id}`;
+  }
+
   let dir = service.getPrivateObjectDir();
   if (!dir.endsWith("/")) dir = `${dir}/`;
   const id = randomUUID();
@@ -38,6 +48,21 @@ export async function uploadBuffer(
 export async function downloadObjectToBuffer(
   objectPath: string,
 ): Promise<{ buffer: Buffer; contentType: string }> {
+  if (isLocal) {
+    const id = objectPath.replace(/^\/objects\/uploads\//, "");
+    const filePath = path.join(LOCAL_STORAGE_DIR, id);
+    if (!fs.existsSync(filePath)) {
+      throw new Error("File not found locally in storage");
+    }
+    const buffer = await fs.promises.readFile(filePath);
+    let contentType = "application/octet-stream";
+    if (fs.existsSync(`${filePath}.meta`)) {
+      const meta = JSON.parse(await fs.promises.readFile(`${filePath}.meta`, "utf-8"));
+      contentType = meta.contentType;
+    }
+    return { buffer, contentType };
+  }
+
   const file = await service.getObjectEntityFile(objectPath);
   const [buffer] = await file.download();
   const [metadata] = await file.getMetadata();

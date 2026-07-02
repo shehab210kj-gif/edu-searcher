@@ -41,9 +41,12 @@ import type {
   ProjectInput,
   ProjectSummary,
   ProjectUpdate,
+  SmartSearchLibraryBody,
+  SmartSearchResponse,
   Stats,
   Template,
   UnauthorizedResponse,
+  UploadLibraryDocumentBody,
   UploadUrlRequest,
   UploadUrlResponse
 } from './api.schemas';
@@ -1626,6 +1629,243 @@ export const useUseLibraryDocument = <TError = ErrorType<NotFoundResponse>,
         TContext
       > => {
       return useMutation(getUseLibraryDocumentMutationOptions(options));
+    }
+
+export const getUploadLibraryDocumentUrl = () => {
+
+
+
+
+  return `/api/library/upload`
+}
+
+/**
+ * @summary Upload a research document to the library
+ */
+export const uploadLibraryDocument = async (uploadLibraryDocumentBody: UploadLibraryDocumentBody, options?: RequestInit): Promise<LibraryDocument> => {
+    const formData = new FormData();
+formData.append(`file`, uploadLibraryDocumentBody.file);
+if(uploadLibraryDocumentBody.title !== undefined) {
+ formData.append(`title`, uploadLibraryDocumentBody.title);
+ }
+if(uploadLibraryDocumentBody.description !== undefined) {
+ formData.append(`description`, uploadLibraryDocumentBody.description);
+ }
+if(uploadLibraryDocumentBody.university !== undefined) {
+ formData.append(`university`, uploadLibraryDocumentBody.university);
+ }
+if(uploadLibraryDocumentBody.degreeLevel !== undefined) {
+ formData.append(`degreeLevel`, uploadLibraryDocumentBody.degreeLevel);
+ }
+if(uploadLibraryDocumentBody.department !== undefined) {
+ formData.append(`department`, uploadLibraryDocumentBody.department);
+ }
+if(uploadLibraryDocumentBody.category !== undefined) {
+ formData.append(`category`, uploadLibraryDocumentBody.category);
+ }
+if(uploadLibraryDocumentBody.tags !== undefined) {
+ formData.append(`tags`, uploadLibraryDocumentBody.tags);
+ }
+
+  return customFetch<LibraryDocument>(getUploadLibraryDocumentUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body:
+      formData,
+  }
+);}
+
+
+
+
+export const getUploadLibraryDocumentMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadLibraryDocument>>, TError,{data: BodyType<UploadLibraryDocumentBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadLibraryDocument>>, TError,{data: BodyType<UploadLibraryDocumentBody>}, TContext> => {
+
+const mutationKey = ['uploadLibraryDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadLibraryDocument>>, {data: BodyType<UploadLibraryDocumentBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  uploadLibraryDocument(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadLibraryDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof uploadLibraryDocument>>>
+    export type UploadLibraryDocumentMutationBody = BodyType<UploadLibraryDocumentBody>
+    export type UploadLibraryDocumentMutationError = ErrorType<Error>
+
+    /**
+ * @summary Upload a research document to the library
+ */
+export const useUploadLibraryDocument = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadLibraryDocument>>, TError,{data: BodyType<UploadLibraryDocumentBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadLibraryDocument>>,
+        TError,
+        {data: BodyType<UploadLibraryDocumentBody>},
+        TContext
+      > => {
+      return useMutation(getUploadLibraryDocumentMutationOptions(options));
+    }
+
+export const getSmartSearchLibraryUrl = () => {
+
+
+
+
+  return `/api/library/smart-search`
+}
+
+/**
+ * @summary Match assignment requirements file against library documents
+ */
+export const smartSearchLibrary = async (smartSearchLibraryBody: SmartSearchLibraryBody, options?: RequestInit): Promise<SmartSearchResponse> => {
+    const formData = new FormData();
+formData.append(`file`, smartSearchLibraryBody.file);
+
+  return customFetch<SmartSearchResponse>(getSmartSearchLibraryUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body:
+      formData,
+  }
+);}
+
+
+
+
+export const getSmartSearchLibraryMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof smartSearchLibrary>>, TError,{data: BodyType<SmartSearchLibraryBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof smartSearchLibrary>>, TError,{data: BodyType<SmartSearchLibraryBody>}, TContext> => {
+
+const mutationKey = ['smartSearchLibrary'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof smartSearchLibrary>>, {data: BodyType<SmartSearchLibraryBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  smartSearchLibrary(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SmartSearchLibraryMutationResult = NonNullable<Awaited<ReturnType<typeof smartSearchLibrary>>>
+    export type SmartSearchLibraryMutationBody = BodyType<SmartSearchLibraryBody>
+    export type SmartSearchLibraryMutationError = ErrorType<Error>
+
+    /**
+ * @summary Match assignment requirements file against library documents
+ */
+export const useSmartSearchLibrary = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof smartSearchLibrary>>, TError,{data: BodyType<SmartSearchLibraryBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof smartSearchLibrary>>,
+        TError,
+        {data: BodyType<SmartSearchLibraryBody>},
+        TContext
+      > => {
+      return useMutation(getSmartSearchLibraryMutationOptions(options));
+    }
+
+export const getSaveProjectToLibraryUrl = (id: number,) => {
+
+
+
+
+  return `/api/projects/${id}/save-to-library`
+}
+
+/**
+ * @summary Save a completed project to the research library
+ */
+export const saveProjectToLibrary = async (id: number, options?: RequestInit): Promise<LibraryDocument> => {
+
+  return customFetch<LibraryDocument>(getSaveProjectToLibraryUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSaveProjectToLibraryMutationOptions = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveProjectToLibrary>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveProjectToLibrary>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['saveProjectToLibrary'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveProjectToLibrary>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  saveProjectToLibrary(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveProjectToLibraryMutationResult = NonNullable<Awaited<ReturnType<typeof saveProjectToLibrary>>>
+
+    export type SaveProjectToLibraryMutationError = ErrorType<NotFoundResponse>
+
+    /**
+ * @summary Save a completed project to the research library
+ */
+export const useSaveProjectToLibrary = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveProjectToLibrary>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveProjectToLibrary>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getSaveProjectToLibraryMutationOptions(options));
     }
 
 export const getAdminLoginUrl = () => {

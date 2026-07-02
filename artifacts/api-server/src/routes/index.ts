@@ -9,6 +9,8 @@ import storageRouter from "./storage";
 import libraryRouter from "./library";
 import adminLibraryRouter from "./admin-library";
 import versionsRouter from "./versions";
+import presentationRouter from "./presentation";
+import crmRouter from "./crm";
 
 const router: IRouter = Router();
 
@@ -22,5 +24,7 @@ router.use(storageRouter);
 router.use(libraryRouter);
 router.use(adminLibraryRouter);
 router.use(versionsRouter);
+router.use(presentationRouter);
+router.use(crmRouter);
 
 export default router;

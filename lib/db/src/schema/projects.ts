@@ -94,6 +94,10 @@ export type LayoutMetadata = {
   showPageNumbers?: boolean;
   pageNumberFormat?: string;
   pageNumberAlign?: "left" | "center" | "right";
+  /** Color of the decorative border frame on all pages (e.g. "#1B4FA3") */
+  borderColor?: string;
+  /** Whether to draw a border frame on every content page */
+  showPageBorder?: boolean;
   pageSetup?: {
     size?: string;
     orientation?: "portrait" | "landscape";
@@ -108,6 +112,8 @@ export type LayoutMetadata = {
     studentName?: string;
     supervisor?: string;
     university?: string;
+    /** English university name for bilingual header */
+    universityEn?: string;
     faculty?: string;
     department?: string;
     degree?: string;
@@ -125,7 +131,7 @@ export const projectsTable = pgTable("projects", {
   templateId: integer("template_id"),
   rawContent: text("raw_content").notNull().default(""),
   sections: jsonb("sections").$type<Section[]>().notNull().default([]),
-  references: jsonb("references").$type<Reference[]>().notNull().default([]),
+  references: jsonb("refs").$type<Reference[]>().notNull().default([]),
   formatting: jsonb("formatting").$type<Formatting>().notNull(),
   analysis: jsonb("analysis").$type<Analysis | null>(),
   verification: jsonb("verification").$type<Verification | null>(),

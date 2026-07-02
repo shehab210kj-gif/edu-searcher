@@ -77,7 +77,7 @@ export function Dashboard() {
             </Link>
           </div>
           
-          {projects && projects.length > 0 ? (
+          {Array.isArray(projects) && projects.length > 0 ? (
             <div className="space-y-4">
               {projects.slice(0, 5).map((project) => (
                 <Link key={project.id} href={`/projects/${project.id}`}>

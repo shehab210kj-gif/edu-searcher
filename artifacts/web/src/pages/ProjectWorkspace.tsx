@@ -8,6 +8,7 @@ import {
   useExtractReferences, 
   useVerifyProject,
   useAssistProject,
+  useSaveProjectToLibrary,
   getListProjectsQueryKey,
   getGetStatsQueryKey
 } from "@workspace/api-client-react";
@@ -18,12 +19,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Loader2, Wand2, FileSearch, CheckCircle2, AlertTriangle, 
-  Download, Printer, Settings, ArrowRight, Trash2, ListTree, RefreshCw, Send, BookMarked
+  Download, Printer, Settings, ArrowRight, Trash2, ListTree, RefreshCw, Send, BookMarked, Presentation
 } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
@@ -45,13 +47,36 @@ export function ProjectWorkspace() {
   const verifyProject = useVerifyProject();
   const updateProject = useUpdateProject();
   const deleteProject = useDeleteProject();
+  const saveToLibrary = useSaveProjectToLibrary();
   const assistProject = useAssistProject();
+
+  const handleSaveToLibrary = async () => {
+    try {
+      await saveToLibrary.mutateAsync({ id });
+      toast({ title: "تم حفظ وأرشفة هذا البحث بنجاح في المكتبة المشتركة" });
+    } catch (err: any) {
+      toast({
+        title: "تعذّر الحفظ بالمكتبة",
+        description: err.response?.data?.error || "حدث خطأ أثناء الاتصال بالخادم.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const [activeTab, setActiveTab] = useState("overview");
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [sectionContent, setSectionContent] = useState("");
   const [assistPrompt, setAssistPrompt] = useState("");
   const [assistResult, setAssistResult] = useState("");
+
+  // States for manual references
+  const [showAddRefForm, setShowAddRefForm] = useState(false);
+  const [refAuthor, setRefAuthor] = useState("");
+  const [refYear, setRefYear] = useState("");
+  const [refTitle, setRefTitle] = useState("");
+  const [refSource, setRefSource] = useState("");
+  const [refType, setRefType] = useState("كتاب");
+  const [refInText, setRefInText] = useState("");
 
   const handleAnalyze = () => {
     analyzeProject.mutate({ id }, {
@@ -67,12 +92,67 @@ export function ProjectWorkspace() {
 
   const handleExtractReferences = () => {
     extractReferences.mutate({ id }, {
-      onSuccess: () => {
-        toast({ title: "تم استخراج المراجع بنجاح" });
+      onSuccess: (data) => {
+        localStorage.setItem(`ref_extracted_${id}`, "true");
+        if (data.references && data.references.length > 0) {
+          toast({ title: `تم استخراج ${data.references.length} من المراجع بنجاح` });
+        } else {
+          toast({ title: "اكتمل الاستخراج بنجاح (لم يتم العثور على مراجع في النص المرفوع)" });
+        }
         queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(id) });
       },
       onError: () => {
         toast({ title: "حدث خطأ أثناء استخراج المراجع", variant: "destructive" });
+      }
+    });
+  };
+
+  const handleAddReference = () => {
+    if (!project) return;
+    if (!refAuthor.trim() || !refTitle.trim()) {
+      toast({ title: "الرجاء كتابة اسم المؤلف وعنوان المرجع على الأقل", variant: "destructive" });
+      return;
+    }
+
+    const formatted = `${refAuthor} (${refYear || "د.ت"}). ${refTitle}. ${refSource || ""}.`.replace(/\s+/g, " ").trim();
+    const newRef = {
+      id: `ref-manual-${Date.now()}`,
+      authors: refAuthor,
+      year: refYear || "د.ت",
+      title: refTitle,
+      source: refSource || "",
+      type: refType,
+      inTextCitation: refInText || `(${refAuthor}, ${refYear || "د.ت"})`,
+      formatted
+    };
+
+    const newReferences = [...project.references, newRef];
+    updateProject.mutate({ id, data: { references: newReferences } }, {
+      onSuccess: () => {
+        toast({ title: "تم إضافة المرجع بنجاح" });
+        localStorage.setItem(`ref_extracted_${id}`, "true"); // Also count manual adds as step completion
+        queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(id) });
+        // Reset form
+        setRefAuthor("");
+        setRefYear("");
+        setRefTitle("");
+        setRefSource("");
+        setRefInText("");
+        setShowAddRefForm(false);
+      },
+      onError: () => {
+        toast({ title: "فشل إضافة المرجع", variant: "destructive" });
+      }
+    });
+  };
+
+  const handleDeleteReference = (refId: string) => {
+    if (!project) return;
+    const newReferences = project.references.filter(r => r.id !== refId);
+    updateProject.mutate({ id, data: { references: newReferences } }, {
+      onSuccess: () => {
+        toast({ title: "تم حذف المرجع" });
+        queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(id) });
       }
     });
   };
@@ -123,8 +203,20 @@ export function ProjectWorkspace() {
     window.location.href = `${import.meta.env.BASE_URL}api/projects/${id}/export?format=docx`;
   };
 
+  const exportRtf = () => {
+    window.location.href = `${import.meta.env.BASE_URL}api/projects/${id}/export?format=rtf`;
+  };
+
+  const exportOdt = () => {
+    window.location.href = `${import.meta.env.BASE_URL}api/projects/${id}/export?format=odt`;
+  };
+
   const exportPdf = () => {
     window.location.href = `${import.meta.env.BASE_URL}api/projects/${id}/export?format=pdf`;
+  };
+
+  const exportPptx = () => {
+    window.location.href = `${import.meta.env.BASE_URL}api/projects/${id}/export-presentation`;
   };
 
   if (isLoading) return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
@@ -157,14 +249,30 @@ export function ProjectWorkspace() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={handleSaveToLibrary} className="gap-2 border-indigo-600/30 text-indigo-700 hover:bg-indigo-50" disabled={saveToLibrary.isPending}>
+            {saveToLibrary.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookMarked className="w-4 h-4" />}
+            حفظ بالمكتبة البحثية
+          </Button>
           <Button variant="outline" size="sm" onClick={exportDocx} className="gap-2">
             <Download className="w-4 h-4" />
             تصدير DOCX
           </Button>
+          <Button variant="outline" size="sm" onClick={exportRtf} className="gap-2">
+            <Download className="w-4 h-4" />
+            تصدير RTF
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportOdt} className="gap-2">
+            <Download className="w-4 h-4" />
+            تصدير ODT
+          </Button>
           <Button variant="outline" size="sm" onClick={exportPdf} className="gap-2">
             <Printer className="w-4 h-4" />
             تصدير PDF
+          </Button>
+          <Button variant="default" size="sm" onClick={exportPptx} className="gap-2 bg-orange-600 hover:bg-orange-700 text-white border-none">
+            <Presentation className="w-4 h-4" />
+            تصدير PPTX (عرض تقديمي)
           </Button>
         </div>
       </div>
@@ -187,14 +295,14 @@ export function ProjectWorkspace() {
                 {project.analysis && <CheckCircle2 className="w-4 h-4 ml-auto text-green-500" />}
               </Button>
               <Button 
-                variant={project.references.length > 0 ? "outline" : "default"} 
+                variant={(project.references.length > 0 || localStorage.getItem(`ref_extracted_${id}`) === "true") ? "outline" : "default"} 
                 className="w-full justify-start gap-2"
                 onClick={handleExtractReferences}
                 disabled={extractReferences.isPending || !project.analysis}
               >
                 {extractReferences.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookMarked className="w-4 h-4" />}
                 2. استخراج المراجع
-                {project.references.length > 0 && <CheckCircle2 className="w-4 h-4 ml-auto text-green-500" />}
+                {(project.references.length > 0 || localStorage.getItem(`ref_extracted_${id}`) === "true") && <CheckCircle2 className="w-4 h-4 ml-auto text-green-500" />}
               </Button>
               <Button 
                 variant={project.verification ? "outline" : "default"} 
@@ -234,12 +342,12 @@ export function ProjectWorkspace() {
 
         <div className="md:col-span-3">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 mb-4">
-              <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
-              <TabsTrigger value="sections" disabled={!project.analysis}>الأقسام والمحتوى</TabsTrigger>
-              <TabsTrigger value="references" disabled={project.references.length === 0}>المراجع</TabsTrigger>
-              <TabsTrigger value="verification" disabled={!project.verification}>التقييم والملاحظات</TabsTrigger>
-              <TabsTrigger value="assistant">المساعد الذكي</TabsTrigger>
+            <TabsList className="flex md:grid w-full overflow-x-auto md:grid-cols-5 mb-4 p-1 bg-muted rounded-lg shrink-0">
+              <TabsTrigger value="overview" className="shrink-0">نظرة عامة</TabsTrigger>
+              <TabsTrigger value="sections" disabled={!project.analysis} className="shrink-0">الأقسام والمحتوى</TabsTrigger>
+              <TabsTrigger value="references" disabled={!project.analysis} className="shrink-0">المراجع</TabsTrigger>
+              <TabsTrigger value="verification" disabled={!project.verification} className="shrink-0">التقييم والملاحظات</TabsTrigger>
+              <TabsTrigger value="assistant" className="shrink-0">المساعد الذكي</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
@@ -332,30 +440,136 @@ export function ProjectWorkspace() {
             <TabsContent value="references">
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                       <CardTitle>المراجع والمصادر</CardTitle>
-                      <CardDescription>تم استخراج وتنسيق المراجع حسب نظام {project.citationStyle}</CardDescription>
+                      <CardDescription>إدارة المراجع المنسقة وتوثيقها حسب نظام {project.citationStyle}</CardDescription>
                     </div>
-                    <Button variant="outline" size="sm" onClick={handleExtractReferences} disabled={extractReferences.isPending}>
-                      <RefreshCw className={`w-4 h-4 mr-2 ${extractReferences.isPending ? 'animate-spin' : ''}`} />
-                      إعادة استخراج
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setShowAddRefForm(!showAddRefForm)}>
+                        {showAddRefForm ? "إلغاء" : "إضافة مرجع يدوياً"}
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={handleExtractReferences} disabled={extractReferences.isPending}>
+                        <RefreshCw className={`w-4 h-4 mr-2 ${extractReferences.isPending ? 'animate-spin' : ''}`} />
+                        استخراج تلقائي
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  {/* Manual Add Form */}
+                  {showAddRefForm && (
+                    <div className="p-4 border rounded-lg bg-muted/40 space-y-3 fade-in-up">
+                      <h4 className="font-bold text-sm">إضافة مرجع أكاديمي جديد</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">المؤلف (أو المؤلفين)</Label>
+                          <Input
+                            placeholder="مثلاً: أحمد، محمد"
+                            value={refAuthor}
+                            onChange={(e) => setRefAuthor(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">سنة النشر</Label>
+                          <Input
+                            placeholder="مثلاً: 2024"
+                            value={refYear}
+                            onChange={(e) => setRefYear(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">نوع المرجع</Label>
+                          <Select value={refType} onValueChange={setRefType}>
+                            <SelectTrigger className="h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="كتاب">كتاب</SelectItem>
+                              <SelectItem value="مقال">مقال علمي</SelectItem>
+                              <SelectItem value="رسالة">رسالة ماجستير/دكتوراه</SelectItem>
+                              <SelectItem value="موقع">موقع إلكتروني</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">عنوان المرجع / الدراسة</Label>
+                          <Input
+                            placeholder="العنوان الكامل للمرجع..."
+                            value={refTitle}
+                            onChange={(e) => setRefTitle(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">المصدر / الناشر / دار النشر</Label>
+                          <Input
+                            placeholder="مثلاً: مجلة العلوم الإدارية، دار الفكر..."
+                            value={refSource}
+                            onChange={(e) => setRefSource(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs">الاستشهاد داخل النص (اختياري)</Label>
+                        <Input
+                          placeholder="مثلاً: (أحمد، 2024)"
+                          value={refInText}
+                          onChange={(e) => setRefInText(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-2">
+                        <Button size="sm" variant="outline" onClick={() => setShowAddRefForm(false)}>إلغاء</Button>
+                        <Button size="sm" onClick={handleAddReference}>حفظ المرجع</Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* References List */}
                   <div className="space-y-4">
                     {project.references.map((ref, i) => (
-                      <div key={ref.id || i} className="p-4 rounded-lg bg-muted/30 border">
-                        <p className="text-sm font-medium leading-relaxed" dir="ltr">{ref.formatted}</p>
-                        {ref.inTextCitation && (
-                          <div className="mt-2 text-xs text-muted-foreground flex gap-2 items-center">
-                            <Badge variant="secondary" className="text-[10px]">استشهاد داخلي</Badge>
-                            <span dir="ltr">{ref.inTextCitation}</span>
-                          </div>
-                        )}
+                      <div key={ref.id || i} className="p-4 rounded-lg bg-muted/30 border flex justify-between items-start gap-4">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium leading-relaxed" dir="ltr">{ref.formatted}</p>
+                          {ref.inTextCitation && (
+                            <div className="mt-2 text-xs text-muted-foreground flex gap-2 items-center">
+                              <Badge variant="secondary" className="text-[10px]">استشهاد داخلي</Badge>
+                              <span dir="ltr">{ref.inTextCitation}</span>
+                            </div>
+                          )}
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0 h-8 w-8"
+                          onClick={() => handleDeleteReference(ref.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     ))}
+
+                    {/* Empty State */}
+                    {project.references.length === 0 && (
+                      <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed rounded-lg bg-muted/10">
+                        <BookMarked className="w-12 h-12 text-muted-foreground/30 mb-4" />
+                        <h4 className="font-bold text-base mb-1">لا توجد مراجع مضافة حالياً</h4>
+                        <p className="text-sm text-muted-foreground mb-4 max-w-sm">
+                          لم يتم استخراج أي مراجع تلقائياً من البحث. يمكنك المحاولة مجدداً بالضغط على "استخراج تلقائي" أو إضافة المراجع يدوياً.
+                        </p>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => setShowAddRefForm(true)}>إضافة مرجع يدوياً</Button>
+                          <Button size="sm" variant="outline" onClick={handleExtractReferences} disabled={extractReferences.isPending}>
+                            {extractReferences.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                            استخراج تلقائي للمراجع
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

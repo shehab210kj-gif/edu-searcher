@@ -17,7 +17,7 @@ import {
   adminPasswordConfigured,
   sessionSecretConfigured,
 } from "../lib/admin-auth";
-import { extractPdfMetadata } from "../lib/documents";
+import { extractPdfMetadata, parseDocxToRich } from "../lib/documents";
 import { uploadBuffer } from "../lib/storage";
 import {
   serializeLibraryDocument,
@@ -85,10 +85,24 @@ router.post(
 
       let pageCount: number | null = null;
       let extractedTitle = "";
+      let richContent = "";
+      let layoutMetadata = {};
+
       if (isPdf) {
         const meta = await extractPdfMetadata(req.file.buffer);
         pageCount = meta.pageCount;
         extractedTitle = meta.title;
+      } else if (isDocx) {
+        try {
+          const parsed = await parseDocxToRich(req.file.buffer);
+          richContent = parsed.html;
+          layoutMetadata = parsed.layout;
+          if (parsed.title) {
+            extractedTitle = parsed.title;
+          }
+        } catch (err) {
+          req.log.warn({ err }, "Failed to extract rich content from uploaded DOCX");
+        }
       }
 
       const body = req.body as Record<string, string | undefined>;
@@ -97,10 +111,14 @@ router.post(
         .map((t) => t.trim())
         .filter(Boolean);
 
+      const docType = body.documentType?.trim() || "master_template";
+      const isTemplate = body.isTemplate === "true" || body.isTemplate === "1" || docType === "master_template";
+
       const values = {
         title: body.title?.trim() || extractedTitle || req.file.originalname,
         description: body.description?.trim() ?? "",
-        documentType: body.documentType?.trim() || "master_template",
+        documentType: docType,
+        workType: body.workType?.trim() || "research",
         coverImageUrl: body.coverImageUrl?.trim() || null,
         university: body.university?.trim() || null,
         degreeLevel: body.degreeLevel?.trim() || null,
@@ -112,8 +130,9 @@ router.post(
         pageCount,
         originalFileName: req.file.originalname,
         originalFileUrl,
-        richContent: "",
-        layoutMetadata: {},
+        richContent,
+        layoutMetadata,
+        isTemplate,
         status: body.status?.trim() || "published",
       };
 

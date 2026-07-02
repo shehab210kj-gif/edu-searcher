@@ -37,7 +37,8 @@ router.post("/projects", async (req, res): Promise<void> => {
       language: parsed.data.language,
       templateId: parsed.data.templateId ?? null,
       rawContent: parsed.data.rawContent ?? "",
-      formatting: defaultFormatting,
+      formatting: (req.body as any).formatting ?? defaultFormatting,
+      layoutMetadata: (req.body as any).layoutMetadata ?? {},
     })
     .returning();
 

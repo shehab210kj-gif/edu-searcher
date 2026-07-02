@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import fs from "node:fs";
 import puppeteer from "puppeteer-core";
 import type { Project, Formatting } from "@workspace/db";
 import {
@@ -13,10 +14,26 @@ function resolveChromium(): string {
   const fromEnv =
     process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROMIUM_PATH;
   if (fromEnv) return fromEnv;
-  for (const bin of ["chromium", "chromium-browser", "google-chrome"]) {
+
+  if (process.platform === "win32") {
+    const winPaths = [
+      "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+      "C:\\Program Files\\Chromium\\Application\\chrome.exe",
+      "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    ];
+    for (const p of winPaths) {
+      if (fs.existsSync(p)) return p;
+    }
+  }
+
+  const searchCmd = process.platform === "win32" ? "where" : "which";
+  for (const bin of ["chromium", "chromium-browser", "google-chrome", "chrome"]) {
     try {
-      const found = execSync(`which ${bin}`, { encoding: "utf8" }).trim();
-      if (found) return found;
+      const found = execSync(`${searchCmd} ${bin}`, { encoding: "utf8" }).trim();
+      if (found) {
+        return process.platform === "win32" ? found.split("\r\n")[0].split("\n")[0].trim() : found;
+      }
     } catch {
       // try the next candidate
     }

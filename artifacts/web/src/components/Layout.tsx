@@ -20,6 +20,7 @@ export function Layout({ children }: LayoutProps) {
   const navigation = [
     { name: "لوحة التحكم", href: "/", icon: LayoutDashboard },
     { name: "المكتبة البحثية", href: "/library", icon: BookOpen },
+    { name: "إدارة الطلبات والعملاء (CRM)", href: "/crm", icon: FileText },
     { name: "المشاريع", href: "/projects/new", icon: PlusCircle, isAction: true },
     { name: "القوالب", href: "/templates", icon: Library },
     { name: "إدارة المكتبة", href: "/admin", icon: Settings },

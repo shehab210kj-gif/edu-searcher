@@ -426,6 +426,97 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /library/upload:
+    post:
+      operationId: uploadLibraryDocument
+      tags: [library]
+      summary: Upload a research document to the library
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                title:
+                  type: string
+                description:
+                  type: string
+                university:
+                  type: string
+                degreeLevel:
+                  type: string
+                department:
+                  type: string
+                category:
+                  type: string
+                tags:
+                  type: string
+              required: [file]
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryDocument"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /library/smart-search:
+    post:
+      operationId: smartSearchLibrary
+      tags: [library]
+      summary: Match assignment requirements file against library documents
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required: [file]
+      responses:
+        "200":
+          description: Matching results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SmartSearchResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /projects/{id}/save-to-library:
+    post:
+      operationId: saveProjectToLibrary
+      tags: [projects]
+      summary: Save a completed project to the research library
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "201":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryDocument"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /admin/login:
     post:
       operationId: adminLogin
@@ -1175,3 +1266,22 @@ components:
       type: object
       properties:
         label: { type: string }
+
+    SmartSearchResultItem:
+      type: object
+      properties:
+        documentId: { type: integer }
+        similarityScore: { type: number }
+        explanation: { type: string }
+        document:
+          $ref: "#/components/schemas/LibraryDocumentSummary"
+      required: [documentId, similarityScore, explanation, document]
+
+    SmartSearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/SmartSearchResultItem"
+      required: [results]

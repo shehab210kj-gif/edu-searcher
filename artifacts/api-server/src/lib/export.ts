@@ -105,6 +105,52 @@ export async function buildDocx(project: Project): Promise<Buffer> {
 
   const children = formatted.blocks.map((block) => renderBlock(block, f));
 
+  // Generate Table of Contents
+  const tocHeading = new Paragraph({
+    heading: HeadingLevel.HEADING_1,
+    bidirectional: true,
+    children: [
+      new TextRun({
+        text: "فهرس المحتويات",
+        bold: true,
+        font: f.fontFamily,
+        size: halfPt(f.headingSize),
+        rightToLeft: true,
+      }),
+    ],
+  });
+
+  const tocParagraphs: Paragraph[] = [tocHeading];
+
+  formatted.blocks.forEach((block) => {
+    if (block.style === "Heading1" || block.style === "Heading2") {
+      const text = block.runs.map((r) => r.text).join("");
+      const indent = block.style === "Heading2" ? cmToTwip(0.8) : 0;
+      tocParagraphs.push(
+        new Paragraph({
+          bidirectional: true,
+          indent: { start: indent },
+          children: [
+            new TextRun({
+              text: text + "  " + ".".repeat(Math.max(5, 60 - text.length)),
+              font: f.fontFamily,
+              size: halfPt(f.fontSize),
+              rightToLeft: true,
+            }),
+          ],
+        }),
+      );
+    }
+  });
+
+  // Prepend TOC to document children
+  const titleIndex = formatted.blocks.findIndex((b) => b.style === "Title");
+  if (titleIndex !== -1) {
+    children.splice(titleIndex + 1, 0, ...tocParagraphs, new Paragraph({ pageBreakBefore: true, children: [] }));
+  } else {
+    children.unshift(...tocParagraphs, new Paragraph({ pageBreakBefore: true, children: [] }));
+  }
+
   const doc = new Document({
     styles: {
       default: {

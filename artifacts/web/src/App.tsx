@@ -11,6 +11,7 @@ import { Templates } from "@/pages/Templates";
 import { Library } from "@/pages/Library";
 import { LibraryPreview } from "@/pages/LibraryPreview";
 import { Admin } from "@/pages/Admin";
+import { CrmDashboard } from "@/pages/CrmDashboard";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/projects/:id" component={ProjectWorkspace} />
       <Route path="/templates" component={Templates} />
       <Route path="/admin" component={Admin} />
+      <Route path="/crm" component={CrmDashboard} />
       <Route component={NotFound} />
     </Switch>
   );

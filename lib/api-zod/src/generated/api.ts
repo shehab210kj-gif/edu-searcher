@@ -1002,6 +1002,63 @@ export const UseLibraryDocumentParams = zod.object({
 
 
 /**
+ * @summary Upload a research document to the library
+ */
+export const UploadLibraryDocumentBody = zod.object({
+  "file": zod.instanceof(File),
+  "title": zod.string().optional(),
+  "description": zod.string().optional(),
+  "university": zod.string().optional(),
+  "degreeLevel": zod.string().optional(),
+  "department": zod.string().optional(),
+  "category": zod.string().optional(),
+  "tags": zod.string().optional()
+})
+
+
+/**
+ * @summary Match assignment requirements file against library documents
+ */
+export const SmartSearchLibraryBody = zod.object({
+  "file": zod.instanceof(File)
+})
+
+export const SmartSearchLibraryResponse = zod.object({
+  "results": zod.array(zod.object({
+  "documentId": zod.number(),
+  "similarityScore": zod.number(),
+  "explanation": zod.string(),
+  "document": zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "documentType": zod.string(),
+  "coverImageUrl": zod.string().nullish(),
+  "university": zod.string().nullish(),
+  "degreeLevel": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "language": zod.string(),
+  "tags": zod.array(zod.string()),
+  "fileType": zod.string(),
+  "pageCount": zod.number().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+}))
+})
+
+
+/**
+ * @summary Save a completed project to the research library
+ */
+export const SaveProjectToLibraryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary Validate the admin password and return a session token
  */
 

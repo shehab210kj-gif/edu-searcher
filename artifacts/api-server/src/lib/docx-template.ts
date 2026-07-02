@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { execFile } from "node:child_process";
 import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -148,26 +149,42 @@ export async function applyTemplateEdits(
 }
 
 /**
- * Convert a DOCX buffer to PDF using headless LibreOffice. An isolated user
- * profile dir is used per call so concurrent conversions don't fight over the
- * default profile lock.
+ * Convert a DOCX buffer to a target format (pdf, rtf, odt) using headless LibreOffice.
  */
-export async function convertDocxToPdf(buffer: Buffer): Promise<Buffer> {
-  const work = await mkdtemp(join(tmpdir(), "docx2pdf-"));
+export async function convertDocxToFormat(
+  buffer: Buffer,
+  format: "pdf" | "rtf" | "odt",
+): Promise<Buffer> {
+  const work = await mkdtemp(join(tmpdir(), `docx2${format}-`));
   const profile = join(work, "profile");
   const input = join(work, "input.docx");
-  const output = join(work, "input.pdf");
+  const output = join(work, `input.${format}`);
   try {
     await writeFile(input, buffer);
+
+    let cmd = "soffice";
+    if (process.platform === "win32") {
+      const winPaths = [
+        "C:\\Program Files\\LibreOffice\\program\\soffice.exe",
+        "C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe",
+      ];
+      for (const p of winPaths) {
+        if (existsSync(p)) {
+          cmd = p;
+          break;
+        }
+      }
+    }
+
     await execFileAsync(
-      "soffice",
+      cmd,
       [
         "--headless",
         "--norestore",
         "--nolockcheck",
-        `-env:UserInstallation=file://${profile}`,
+        `-env:UserInstallation=file://${process.platform === "win32" ? profile.replace(/\\/g, "/") : profile}`,
         "--convert-to",
-        "pdf",
+        format,
         "--outdir",
         work,
         input,
@@ -178,4 +195,11 @@ export async function convertDocxToPdf(buffer: Buffer): Promise<Buffer> {
   } finally {
     await rm(work, { recursive: true, force: true });
   }
+}
+
+/**
+ * Convert a DOCX buffer to PDF using headless LibreOffice.
+ */
+export async function convertDocxToPdf(buffer: Buffer): Promise<Buffer> {
+  return convertDocxToFormat(buffer, "pdf");
 }

@@ -5,6 +5,7 @@ import {
   integer,
   jsonb,
   timestamp,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -41,7 +42,7 @@ export const libraryDocumentsTable = pgTable("library_documents", {
   department: text("department"),
   category: text("category"),
   language: text("language").notNull().default("ar"),
-  tags: jsonb("tags").$type<string[]>().notNull().default([]),
+  tags: text("tags").array().$type<string[]>().notNull().default([]),
   originalFileName: text("original_file_name"),
   originalFileUrl: text("original_file_url"),
   /**
@@ -59,6 +60,7 @@ export const libraryDocumentsTable = pgTable("library_documents", {
     .notNull()
     .default({}),
   formatting: jsonb("formatting").$type<Formatting | null>(),
+  isTemplate: boolean("is_template").notNull().default(false),
   status: text("status").notNull().default("published"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
