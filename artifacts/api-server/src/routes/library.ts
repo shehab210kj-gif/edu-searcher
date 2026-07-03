@@ -47,8 +47,11 @@ router.get("/library", async (req, res): Promise<void> => {
   const q = parsed.data;
   const conditions = [PUBLISHED];
 
-  if (q.documentType)
+  if (q.documentType) {
     conditions.push(eq(libraryDocumentsTable.documentType, q.documentType));
+  } else {
+    conditions.push(sql`${libraryDocumentsTable.documentType} <> 'master_template'`);
+  }
   if (q.category) conditions.push(eq(libraryDocumentsTable.category, q.category));
   if (q.university)
     conditions.push(eq(libraryDocumentsTable.university, q.university));
@@ -111,7 +114,7 @@ router.get("/library/facets", async (_req, res): Promise<void> => {
     const rows = await db
       .select({ value: column, count: sql<number>`count(*)::int` })
       .from(libraryDocumentsTable)
-      .where(and(PUBLISHED, sql`${column} is not null and ${column} <> ''`))
+      .where(and(PUBLISHED, sql`${column} is not null and ${column} <> '' and ${libraryDocumentsTable.documentType} <> 'master_template'`))
       .groupBy(column)
       .orderBy(desc(sql`count(*)`));
     return rows
@@ -130,7 +133,7 @@ router.get("/library/facets", async (_req, res): Promise<void> => {
         sql`unnest(${libraryDocumentsTable.tags}) as tag(value)`,
         sql`true`,
       )
-      .where(and(PUBLISHED, sql`tag.value <> ''`))
+      .where(and(PUBLISHED, sql`tag.value <> '' and ${libraryDocumentsTable.documentType} <> 'master_template'`))
       .groupBy(sql`tag.value`)
       .orderBy(desc(sql`count(*)`));
     return rows
