@@ -370,9 +370,9 @@ router.post("/library/:id/use", async (req, res): Promise<void> => {
     return;
   }
 
-  // TEMPLATE mode: when the original DOCX is preserved in storage and this document
-  // is flagged as a template, clone it so the project owns an immutable copy.
-  if (doc.isTemplate && doc.originalFileUrl) {
+  // TEMPLATE mode: when the original DOCX is preserved in storage,
+  // clone it so the project owns an immutable copy.
+  if (doc.originalFileUrl && doc.fileType === "docx") {
     try {
       const { buffer } = await downloadObjectToBuffer(doc.originalFileUrl);
       const templateFileUrl = await uploadBuffer(buffer, DOCX_MIME);
@@ -406,6 +406,8 @@ router.post("/library/:id/use", async (req, res): Promise<void> => {
   }
 
   // Legacy documents without a preserved original DOCX use the AI/rich pipeline.
+  // We extract plain text so the frontend editor has content to display.
+  const plainText = doc.richContent.replace(/<[^>]*>/g, " ").trim();
   const [project] = await db
     .insert(projectsTable)
     .values({
@@ -413,7 +415,16 @@ router.post("/library/:id/use", async (req, res): Promise<void> => {
       workType: doc.documentType,
       citationStyle: "APA",
       language: doc.language,
-      rawContent: "",
+      rawContent: plainText,
+      sections: plainText ? [{ key: "imported", heading: "المحتوى المستورد", content: plainText }] : [],
+      analysis: plainText ? {
+        researchType: "بحث مستورد",
+        pageCount: Math.max(1, Math.ceil(plainText.length / 1500)),
+        language: doc.language,
+        specialization: doc.category || "عام",
+        summary: doc.description || "بحث مستورد للتحرير",
+        detectedSections: ["المحتوى المستورد"]
+      } : null,
       formatting: doc.formatting ?? defaultFormatting,
       sourceLibraryDocumentId: doc.id,
       richContent: doc.richContent,
@@ -677,6 +688,21 @@ router.post(
         }).join("\n");
       }
 
+      // Generate DOCX to act as the original file for future usage as a TEMPLATE
+      let originalFileUrl: string | null = null;
+      try {
+        const exportInput = {
+          title: project.title,
+          richContent: project.richContent ?? "",
+          layoutMetadata: project.layoutMetadata ?? {},
+          formatting: project.formatting ?? defaultFormatting,
+        };
+        const docxBuffer = await buildDocxFromRich(exportInput);
+        originalFileUrl = await uploadBuffer(docxBuffer, DOCX_MIME);
+      } catch (err) {
+        req.log.warn({ err }, "Failed to generate original DOCX for library document");
+      }
+
       // Insert as previous research document in library
       const [doc] = await db
         .insert(libraryDocumentsTable)
@@ -689,6 +715,7 @@ router.post(
           richContent: project.richContent ?? "",
           layoutMetadata: project.layoutMetadata ?? {},
           formatting: project.formatting,
+          originalFileUrl,
           isTemplate: false,
           status: "published",
         })
