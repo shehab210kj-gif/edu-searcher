@@ -1,8 +1,4 @@
-import { File as NodeFile } from "node:buffer";
-if (typeof globalThis.File === "undefined") {
-  (globalThis as any).File = NodeFile;
-}
-
+import "./polyfill";
 import app from "./app";
 import { logger } from "./lib/logger";
 
