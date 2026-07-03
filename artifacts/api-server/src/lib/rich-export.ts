@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs";
-import puppeteer from "puppeteer-core";
+import puppeteer, { Browser, Page } from "puppeteer-core";
 import HTMLtoDOCX from "@turbodocx/html-to-docx";
 import type { Formatting, LayoutMetadata } from "@workspace/db";
 import { downloadObjectToBuffer } from "./storage";
@@ -120,36 +120,74 @@ export async function inlineStorageImages(html: string): Promise<string> {
   return out;
 }
 
+function getEnglishUniversity(arabicName: string): string {
+  const mapping: Record<string, string> = {
+    "جامعة الملك سعود": "King Saud University",
+    "جامعة أم القرى": "Umm Al-Qura University",
+    "جامعة الملك عبدالعزيز": "King Abdulaziz University",
+    "جامعة الملك فيصل": "King Faisal University",
+    "جامعة الإمام محمد بن سعود": "Imam Mohammad Ibn Saud Islamic University",
+    "جامعة الأمير سطام": "Prince Sattam bin Abdulaziz University",
+    "جامعة طيبة": "Taibah University",
+    "جامعة القصيم": "Qassim University",
+  };
+  const trimmed = (arabicName || "").trim();
+  return mapping[trimmed] || trimmed;
+}
+
 function coverHtml(layout: LayoutMetadata): string {
   if (layout.coverPageHtml && layout.coverPageHtml.trim()) {
     return layout.coverPageHtml;
   }
   const c = layout.cover;
   if (!c) return "";
-  const line = (label: string | undefined) =>
-    label ? `<p style="text-align:center;margin:6pt 0;">${label}</p>` : "";
-  return [
-    c.logoUrl
-      ? `<p style="text-align:center;"><img src="${c.logoUrl}" style="max-height:120px;" /></p>`
-      : "",
-    c.university
-      ? `<p style="text-align:center;font-weight:700;">${c.university}</p>`
-      : "",
-    line(c.faculty),
-    line(c.department),
+
+  const uniNameAr = c.university || "جامعة الملك سعود";
+  const uniNameEn = getEnglishUniversity(uniNameAr);
+
+  const logoHtml = c.logoUrl 
+    ? `<img src="${c.logoUrl}" style="max-height:90px; max-width:90px;" />` 
+    : `<div style="height:90px; width:90px;"></div>`;
+
+  const headerTable = `
+    <table style="width: 100%; border: none; border-collapse: collapse; margin-bottom: 24pt;">
+      <tr style="border: none;">
+        <td style="width: 38%; border: none; text-align: right; vertical-align: top; font-family: 'Amiri', serif; font-size: 11pt; padding: 0; line-height: 1.4;">
+          المملكة العربية السعودية<br/>
+          وزارة التعليم<br/>
+          ${uniNameAr}<br/>
+          ${c.faculty || ""}<br/>
+          ${c.department || ""}
+        </td>
+        <td style="width: 24%; border: none; text-align: center; vertical-align: middle; padding: 0;">
+          ${logoHtml}
+        </td>
+        <td style="width: 38%; border: none; text-align: left; vertical-align: top; font-family: 'Amiri', serif; font-size: 11pt; padding: 0; line-height: 1.4; direction: ltr;">
+          Kingdom of Saudi Arabia<br/>
+          Ministry of Education<br/>
+          ${uniNameEn}
+        </td>
+      </tr>
+    </table>
+  `;
+
+  const lines = [
+    headerTable,
     c.title
-      ? `<h1 style="text-align:center;margin-top:48pt;">${c.title}</h1>`
+      ? `<h1 style="text-align:center; margin-top:80pt; font-size:24pt; font-weight:bold; border:none; background:none; padding:0; color:black;">${c.title}</h1>`
       : "",
     c.subtitle
-      ? `<p style="text-align:center;font-style:italic;">${c.subtitle}</p>`
+      ? `<p style="text-align:center; font-size:14pt; font-style:italic; margin-top:12pt; margin-bottom:60pt;">${c.subtitle}</p>`
       : "",
-    line(c.studentName),
-    line(c.supervisor),
-    line(c.degree),
-    line(c.year),
-  ]
-    .filter(Boolean)
-    .join("\n");
+    `<div style="margin-top: 100pt; text-align: center; font-size: 14pt; line-height: 2.0; font-family: 'Amiri', serif;">
+      ${c.studentName ? `<p>إعداد الطالب/الطالبة: <strong>${c.studentName}</strong></p>` : ""}
+      ${c.supervisor ? `<p>إشراف الدكتور/الأستاذ: <strong>${c.supervisor}</strong></p>` : ""}
+      ${c.degree ? `<p>متطلب لنيل درجة: <strong>${c.degree}</strong></p>` : ""}
+      ${c.year ? `<p>العام الجامعي: <strong>${c.year}</strong></p>` : ""}
+    </div>`
+  ];
+
+  return lines.filter(Boolean).join("\n");
 }
 
 function generateRichIndexes(html: string): { toc: string; tables: string; figures: string } {
@@ -306,13 +344,65 @@ function printTemplate(
  * Chromium, reusing the bundled Amiri font for correct Arabic shaping/RTL.
  * Cover page, headers/footers and page numbers are preserved.
  */
-export async function buildPdfFromRich(
-  project: RichExportInput,
-): Promise<Buffer> {
+class BrowserManager {
+  private static instance: Browser | null = null;
+  private static isLaunching = false;
+
+  public static async getBrowser(): Promise<Browser> {
+    if (this.instance) {
+      try {
+        await this.instance.target();
+        return this.instance;
+      } catch (err) {
+        console.warn("Pooled browser is unresponsive, restarting...", err);
+        await this.closeBrowser();
+      }
+    }
+
+    if (this.isLaunching) {
+      for (let i = 0; i < 50; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        if (this.instance) return this.instance;
+      }
+    }
+
+    this.isLaunching = true;
+    try {
+      this.instance = await puppeteer.launch({
+        executablePath: resolveChromium(),
+        headless: true,
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-gpu",
+          "--font-render-hinting=none",
+        ],
+      });
+      this.instance.on("disconnected", () => {
+        this.instance = null;
+      });
+      return this.instance;
+    } finally {
+      this.isLaunching = false;
+    }
+  }
+
+  public static async closeBrowser(): Promise<void> {
+    if (this.instance) {
+      try {
+        await this.instance.close();
+      } catch {}
+      this.instance = null;
+    }
+  }
+}
+
+async function renderPdf(project: RichExportInput): Promise<Buffer> {
   const layout: LayoutMetadata = project.layoutMetadata ?? {};
   const f: Formatting = project.formatting;
   const borderColor = layout.borderColor ?? "#1B4FA3";
-  const showPageBorder = layout.showPageBorder !== false; // default true
+  const showPageBorder = layout.showPageBorder !== false;
 
   const inlined = await inlineStorageImages(project.richContent ?? "");
   const cover = await inlineStorageImages(coverHtml(layout));
@@ -381,8 +471,6 @@ export async function buildPdfFromRich(
     margin: 0 auto 10pt !important;
   }
 
-
-  /* ===== HEADING STYLES ===== */
   h1 {
     font-size: ${f.headingSize}pt;
     font-weight: 800;
@@ -418,13 +506,10 @@ export async function buildPdfFromRich(
   }
   h4 { font-size: ${Math.max(f.fontSize + 1, 12)}pt; font-weight: 700; color: #1a3a6b; margin: 12pt 0 6pt; }
 
-  /* ===== PARAGRAPH ===== */
   p { margin: 0 0 10pt; text-align: ${f.paragraphAlign ?? 'justify'}; color: #1a1a2e; }
 
-  /* ===== IMAGES ===== */
   img { max-width: 100%; height: auto; }
 
-  /* ===== TABLE STYLES ===== */
   table { width: 100%; border-collapse: collapse; margin: 12pt 0; }
   thead th {
     background: ${borderColor};
@@ -445,7 +530,6 @@ export async function buildPdfFromRich(
   }
   tr:nth-child(even) td { background: rgba(27,79,163,0.04); }
 
-  /* ===== BLOCKQUOTE ===== */
   blockquote {
     border-right: 4pt solid ${borderColor};
     background: rgba(27,79,163,0.05);
@@ -457,10 +541,8 @@ export async function buildPdfFromRich(
     print-color-adjust: exact;
   }
 
-  /* ===== PAGE BREAKS ===== */
   .cover, .toc, .tables-index, .figures-index { break-after: page; page-break-after: always; }
 
-  /* ===== TOC STYLES ===== */
   .toc-section h2 {
     color: #ffffff;
     background: ${borderColor};
@@ -484,7 +566,6 @@ export async function buildPdfFromRich(
   }
   .toc-section li span { background: #fff; padding-left: 4px; }
 
-  /* ===== PAGE NUMBER (hexagon-style via wrapper) ===== */
   .page-num-hex {
     display: inline-block;
     background: ${borderColor};
@@ -499,7 +580,6 @@ export async function buildPdfFromRich(
     print-color-adjust: exact;
   }
 
-  /* ===== STRONG / EM ===== */
   strong { color: ${borderColor}; font-weight: 700; }
   em { color: #1B5E3B; font-style: italic; }
 </style>
@@ -509,21 +589,10 @@ ${content}
 </body>
 </html>`;
 
-  const browser = await puppeteer.launch({
-    executablePath: resolveChromium(),
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-      "--font-render-hinting=none",
-    ],
-  });
-
+  const browser = await BrowserManager.getBrowser();
+  const page = await browser.newPage();
   try {
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "load" });
+    await page.setContent(html, { waitUntil: "load", timeout: 30000 });
     await page.evaluateHandle("document.fonts.ready");
 
     const showPageNumbers = Boolean(layout.showPageNumbers);
@@ -534,12 +603,10 @@ ${content}
       ? `${footerHtml}<span class="pageNumber"></span>`
       : footerHtml;
 
-    // Force displayHeaderFooter if page border is enabled
     const displayHeaderFooter = Boolean(
       headerHtml || footerHtml || showPageNumbers || showPageBorder,
     );
 
-    // Calculate physical page size for the borders
     const isLetter = ps?.size === "Letter";
     const pageWidth = isLetter ? 21.59 : 21.0;
     const pageHeight = isLetter ? 27.94 : 29.7;
@@ -549,7 +616,6 @@ ${content}
          <div style="position: absolute; top: 0.7cm; left: 0.7cm; width: ${pageWidth - 1.4}cm; height: ${pageHeight - 1.4}cm; border: 0.8pt solid ${borderColor}; box-sizing: border-box; pointer-events: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; z-index: 9999;"></div>`
       : "";
 
-    // Combine borders and headers
     const finalHeaderTemplate = `
       <div style="font-size: 8pt; width: 100%; height: 100%; position: relative; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
         ${borderHtml}
@@ -576,6 +642,25 @@ ${content}
 
     return Buffer.from(pdf);
   } finally {
-    await browser.close();
+    await page.close();
+  }
+}
+
+export async function buildPdfFromRich(
+  project: RichExportInput,
+  retries = 2
+): Promise<Buffer> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await renderPdf(project);
+    } catch (err) {
+      attempt++;
+      if (attempt > retries) {
+        throw err;
+      }
+      console.warn(`PDF generation failed (attempt ${attempt}/${retries + 1}), retrying...`, err);
+      await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+    }
   }
 }

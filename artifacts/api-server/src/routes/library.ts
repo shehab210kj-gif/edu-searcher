@@ -178,6 +178,8 @@ router.get("/library/:id", async (req, res): Promise<void> => {
 // Inline preview of the REAL document — never an HTML rendering. PDF originals
 // are streamed as-is; DOCX originals are rendered to PDF by headless LibreOffice
 // so fonts, layout, RTL, headers/footers, images and tables are preserved.
+const previewCache = new Map<number, { pdf: Buffer; updatedAt: number }>();
+
 router.get("/library/:id/preview.pdf", async (req, res): Promise<void> => {
   const params = GetLibraryDocumentParams.safeParse(req.params);
   if (!params.success) {
@@ -192,15 +194,59 @@ router.get("/library/:id/preview.pdf", async (req, res): Promise<void> => {
     res.status(404).json({ error: "المستند غير موجود" });
     return;
   }
-  if (!doc.originalFileUrl) {
-    res.status(404).json({ error: "لا تتوفر معاينة لهذا المستند" });
+
+  if (!doc.originalFileUrl && (!doc.richContent || !doc.richContent.trim())) {
+    res.status(422).json({ error: "المستند فارغ ولا تتوفر له معاينة" });
     return;
   }
 
+  const docUpdatedAt = doc.updatedAt ? new Date(doc.updatedAt).getTime() : 0;
+  const cached = previewCache.get(doc.id);
+  if (cached && cached.updatedAt === docUpdatedAt) {
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", "inline");
+    res.send(cached.pdf);
+    return;
+  }
+
+  if (doc.richContent) {
+    const isUnsafe = /<script|javascript:|on\w+=/i.test(doc.richContent);
+    if (isUnsafe) {
+      res.status(422).json({ error: "محتوى غير آمن" });
+      return;
+    }
+  }
+
   try {
-    const { buffer } = await downloadObjectToBuffer(doc.originalFileUrl);
-    const pdf =
-      doc.fileType === "pdf" ? buffer : await convertDocxToPdf(buffer);
+    let pdf: Buffer;
+    if (doc.originalFileUrl) {
+      const { buffer } = await downloadObjectToBuffer(doc.originalFileUrl);
+      pdf = doc.fileType === "pdf" ? buffer : await convertDocxToPdf(buffer);
+    } else {
+      const exportInput = {
+        title: doc.title,
+        richContent: doc.richContent,
+        layoutMetadata: doc.layoutMetadata,
+        formatting: doc.formatting || {
+          fontFamily: "Amiri",
+          fontSize: 12,
+          lineSpacing: 1.5,
+          headingSize: 18,
+          subheadingSize: 14,
+          marginTop: 2.5,
+          marginBottom: 2.5,
+          marginLeft: 2.5,
+          marginRight: 2.5,
+          pageSize: "A4",
+          paragraphAlign: "justify",
+          firstLineIndent: 1.25
+        }
+      };
+      pdf = await buildPdfFromRich(exportInput);
+    }
+
+    previewCache.set(doc.id, { pdf, updatedAt: docUpdatedAt });
+
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", "inline");
     res.send(pdf);

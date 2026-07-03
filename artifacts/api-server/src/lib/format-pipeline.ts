@@ -135,6 +135,18 @@ export function buildFormattedDocument(project: Project): FormattedDocument {
   for (const section of project.sections) {
     const heading = cleanInline(normalize(section.heading));
     if (heading) {
+      // Normalize heading text: strip numbering, punctuation prefixes, and trim
+      const cleanHeading = heading
+        .replace(/^[\d\s\p{P}]+/gu, "")
+        .trim()
+        .toLowerCase();
+      
+      // Skip sections that represent reference lists since they are appended structurally
+      const isRefs = /^(المراجع|قائمة المراجع|المصادر|المصادر والمراجع|references|bibliography|sources)$/i.test(cleanHeading);
+      if (isRefs) {
+        continue;
+      }
+
       const style = section.level === 2 ? "Heading2" : "Heading1";
       blocks.push({ style, runs: [{ text: heading, bold: true }] });
     }

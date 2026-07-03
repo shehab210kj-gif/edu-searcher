@@ -697,6 +697,36 @@ export function NewProject() {
 
           {showFormatting && (
             <CardContent className="pt-0">
+              {/* Shortcut to apply general academic formatting */}
+              <div className="flex items-center justify-between mb-4 bg-purple-500/10 dark:bg-purple-950/20 p-2.5 rounded-lg border border-purple-200/50 dark:border-purple-800/30 gap-3 flex-wrap md:flex-nowrap">
+                <span className="text-xs text-purple-700 dark:text-purple-300 font-medium font-bold">💡 اختصار سريع:</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="bg-purple-600 hover:bg-purple-700 text-white hover:text-white border-transparent text-xs gap-1 py-1 px-3 h-8 shadow-sm transition-all"
+                  onClick={() => {
+                    setFontFamily("Traditional Arabic");
+                    setFontSize("12");
+                    setHeadingSize("18");
+                    setSubheadingSize("14");
+                    setLineSpacing("1.5");
+                    setParagraphAlign("justify");
+                    setPageSize("A4");
+                    setOrientation("portrait");
+                    setMarginTop("2.5");
+                    setMarginBottom("2.5");
+                    setMarginLeft("2.5");
+                    setMarginRight("3.0");
+                    setShowPageNumbers(true);
+                    setPageNumberFormat("1, 2, 3");
+                    setPageNumberAlign("center");
+                    toast({ title: "تم تطبيق التنسيق الأكاديمي العام بنجاح", description: "تم ضبط حجم الخط 12، هوامش 2.5سم، خط Traditional Arabic وتباعد 1.5." });
+                  }}
+                >
+                  تطبيق التنسيق الأكاديمي العام (خط 12)
+                </Button>
+              </div>
+
               {/* Tab Navigation (Word Ribbon Style) */}
               <div className="flex border-b border-border mb-5 overflow-x-auto gap-1">
                 <button

@@ -25,12 +25,15 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Loader2, Wand2, FileSearch, CheckCircle2, AlertTriangle, 
-  Download, Printer, Settings, ArrowRight, Trash2, ListTree, RefreshCw, Send, BookMarked, Presentation
+  Download, Printer, Settings, ArrowRight, Trash2, ListTree, RefreshCw, Send, BookMarked, Presentation,
+  Eye
 } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import type { Project, Section } from "@workspace/api-client-react";
 import { TemplateWorkspace } from "./TemplateWorkspace";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PdfPreview } from "@/components/PdfPreview";
 
 export function ProjectWorkspace() {
   const params = useParams();
@@ -64,6 +67,8 @@ export function ProjectWorkspace() {
   };
 
   const [activeTab, setActiveTab] = useState("overview");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewReloadKey, setPreviewReloadKey] = useState(0);
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [sectionContent, setSectionContent] = useState("");
   const [assistPrompt, setAssistPrompt] = useState("");
@@ -250,6 +255,10 @@ export function ProjectWorkspace() {
         </div>
 
         <div className="flex items-center flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => { setPreviewReloadKey(prev => prev + 1); setPreviewOpen(true); }} className="gap-2 border-purple-600/30 text-purple-700 hover:bg-purple-50">
+            <Eye className="w-4 h-4" />
+            معاينة قبل التصدير
+          </Button>
           <Button variant="outline" size="sm" onClick={handleSaveToLibrary} className="gap-2 border-indigo-600/30 text-indigo-700 hover:bg-indigo-50" disabled={saveToLibrary.isPending}>
             {saveToLibrary.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookMarked className="w-4 h-4" />}
             حفظ بالمكتبة البحثية
@@ -675,6 +684,27 @@ export function ProjectWorkspace() {
           </Tabs>
         </div>
       </div>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-4">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5 text-purple-600" />
+              معاينة مستند البحث قبل التصدير
+            </DialogTitle>
+            <DialogDescription>
+              هذه معاينة حية لشكل البحث النهائي المنسق، متضمناً الغلاف والفهرس وقائمة المراجع.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 bg-muted rounded-lg overflow-y-auto border p-2 min-h-[50vh]">
+            <PdfPreview 
+              src={`/api/projects/${id}/preview.pdf`} 
+              reloadKey={previewReloadKey} 
+              className="w-full"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
