@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs";
-import puppeteer, { Browser, Page } from "puppeteer-core";
+import puppeteer, { Browser, Page } from "puppeteer";
 import HTMLtoDOCX from "@turbodocx/html-to-docx";
 import type { Formatting, LayoutMetadata } from "@workspace/db";
 import { downloadObjectToBuffer } from "./storage";
@@ -19,7 +19,7 @@ export interface RichExportInput {
   formatting: Formatting;
 }
 
-function resolveChromium(): string {
+function resolveChromium(): string | undefined {
   const fromEnv =
     process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROMIUM_PATH;
   if (fromEnv) return fromEnv;
@@ -47,9 +47,7 @@ function resolveChromium(): string {
       // try the next candidate
     }
   }
-  throw new Error(
-    "Chromium executable not found for PDF export. Set PUPPETEER_EXECUTABLE_PATH.",
-  );
+  return undefined;
 }
 
 function cmToTwip(cm: number): number {
@@ -366,10 +364,11 @@ class BrowserManager {
       }
     }
 
+    const executablePath = resolveChromium();
     this.isLaunching = true;
     try {
       this.instance = await puppeteer.launch({
-        executablePath: resolveChromium(),
+        ...(executablePath ? { executablePath } : {}),
         headless: true,
         args: [
           "--no-sandbox",

@@ -255,22 +255,27 @@ router.get("/projects/:id/preview.pdf", async (req, res): Promise<void> => {
     return;
   }
 
-  if (project.documentMode !== "TEMPLATE" || !project.templateFileUrl) {
-    res.status(400).json({ error: "المعاينة متاحة لمستندات القوالب فقط" });
-    return;
-  }
-
   try {
-    const { buffer: original } = await downloadObjectToBuffer(
-      project.templateFileUrl,
-    );
-    const docx = await applyTemplateEdits(original, project.templateContent);
-    const pdf = await convertDocxToPdf(docx);
+    let pdf: Buffer;
+    if (project.documentMode === "TEMPLATE") {
+      if (!project.templateFileUrl) {
+        res.status(400).json({ error: "ملف القالب غير متوفر" });
+        return;
+      }
+      const { buffer: original } = await downloadObjectToBuffer(
+        project.templateFileUrl,
+      );
+      const docx = await applyTemplateEdits(original, project.templateContent);
+      pdf = await convertDocxToPdf(docx);
+    } else {
+      pdf = await buildPdfFromRich(project);
+    }
+
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", "inline");
     res.send(pdf);
   } catch (err) {
-    req.log.error({ err }, "Failed to render template preview");
+    req.log.error({ err }, "Failed to render document preview");
     res.status(500).json({ error: "تعذّرت معاينة المستند" });
   }
 });
