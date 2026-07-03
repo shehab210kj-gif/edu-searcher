@@ -25,11 +25,8 @@ export async function uploadBuffer(
   contentType: string,
 ): Promise<string> {
   if (isLocal) {
-    const id = randomUUID();
-    const filePath = path.join(LOCAL_STORAGE_DIR, id);
-    await fs.promises.writeFile(filePath, buffer);
-    await fs.promises.writeFile(`${filePath}.meta`, JSON.stringify({ contentType }));
-    return `/objects/uploads/${id}`;
+    const base64 = buffer.toString("base64");
+    return `data:${contentType};base64,${base64}`;
   }
 
   let dir = service.getPrivateObjectDir();
@@ -44,10 +41,20 @@ export async function uploadBuffer(
   return `/objects/uploads/${id}`;
 }
 
-/** Download an object (path starting with `/objects/`) back into memory. */
+/** Download an object (path starting with `/objects/` or a data URL) back into memory. */
 export async function downloadObjectToBuffer(
   objectPath: string,
 ): Promise<{ buffer: Buffer; contentType: string }> {
+  if (objectPath.startsWith("data:")) {
+    const match = objectPath.match(/^data:([^;]+);base64,(.*)$/);
+    if (!match) {
+      throw new Error("Invalid data URL format");
+    }
+    const contentType = match[1];
+    const buffer = Buffer.from(match[2], "base64");
+    return { buffer, contentType };
+  }
+
   if (isLocal) {
     const id = objectPath.replace(/^\/objects\/uploads\//, "");
     const filePath = path.join(LOCAL_STORAGE_DIR, id);
