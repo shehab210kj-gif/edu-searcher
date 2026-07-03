@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useCreateProject, useListTemplates } from "@workspace/api-client-react";
+import { useCreateProject, useListTemplates, useListLibraryDocuments, useGetLibraryDocument } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -103,6 +103,11 @@ export function NewProject() {
   const queryClient = useQueryClient();
   const createProject = useCreateProject();
   const { data: templates } = useListTemplates();
+  const { data: coversData } = useListLibraryDocuments({
+    documentType: "master_template",
+    page: 1,
+    pageSize: 100,
+  });
 
   const [isUploading, setIsUploading] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -163,6 +168,19 @@ export function NewProject() {
   const [selectedParts, setSelectedParts] = useState<string[]>(["cover", "toc", "intro", "body", "conclusion", "refs"]);
   const [contentType, setContentType] = useState<"body" | "plan">("body");
 
+  const selectedTemplateId = coverStyle.startsWith("template_")
+    ? parseInt(coverStyle.replace("template_", ""), 10)
+    : null;
+
+  const { data: selectedCoverTemplate } = useGetLibraryDocument(
+    selectedTemplateId || 0,
+    {
+      query: {
+        enabled: !!selectedTemplateId,
+      }
+    } as any
+  );
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -173,6 +191,225 @@ export function NewProject() {
       rawContent: ""
     }
   });
+
+  const getCoverPageHtml = (
+    style: string,
+    title: string,
+    subtitle: string,
+    student: string,
+    supervisor: string,
+    uni: string,
+    uniEn: string,
+    fac: string,
+    dept: string,
+    deg: string,
+    year: string,
+    logo: string,
+    borderCol: string
+  ) => {
+    if (style.startsWith("template_")) {
+      if (selectedCoverTemplate && selectedCoverTemplate.richContent) {
+        return selectedCoverTemplate.richContent
+          .replace(/{title}/g, title || "")
+          .replace(/{student}/g, student || "")
+          .replace(/{supervisor}/g, supervisor || "")
+          .replace(/{university}/g, uni || "")
+          .replace(/{faculty}/g, fac || "")
+          .replace(/{department}/g, dept || "")
+          .replace(/{degree}/g, deg || "")
+          .replace(/{year}/g, year || "");
+      }
+      return "";
+    }
+
+    const frameBorderOuter = `position:absolute;top:8pt;right:8pt;bottom:8pt;left:8pt;border:3pt solid ${borderCol};pointer-events:none;z-index:10;`;
+    const frameBorderInner = `position:absolute;top:14pt;right:14pt;bottom:14pt;left:14pt;border:1pt solid ${borderCol};pointer-events:none;z-index:10;`;
+
+    if (style === "modern") {
+      return `
+<div style="font-family:'Cairo','Segoe UI','Arial',sans-serif;direction:rtl;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;background:linear-gradient(160deg,#0a1628 0%,#0d2347 40%,#1a3a6b 70%,#0f2a50 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative;box-sizing:border-box;">
+  <svg style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0.06;pointer-events:none;" xmlns="http://www.w3.org/2000/svg">
+    <defs><pattern id="hex" x="0" y="0" width="60" height="52" patternUnits="userSpaceOnUse"><polygon points="30,2 58,17 58,47 30,62 2,47 2,17" fill="none" stroke="#C9A84C" stroke-width="1"/></pattern></defs>
+    <rect width="100%" height="100%" fill="url(#hex)"/>
+  </svg>
+  <div style="background:linear-gradient(90deg,#C9A84C,#F0D070,#C9A84C);height:5pt;width:100%;flex-shrink:0;position:relative;z-index:1;"></div>
+  <div style="position:relative;z-index:1;padding:32pt 36pt 20pt 36pt;flex-shrink:0;text-align:center;">
+    ${logo ? `<img src="${logo}" style="max-height:70pt;margin-bottom:10pt;filter:drop-shadow(0 2px 10px rgba(201,168,76,0.4));" />` : `<div style="width:55pt;height:55pt;border-radius:50%;border:2pt solid #C9A84C;margin:0 auto 10pt;line-height:55pt;text-align:center;"><span style="color:#C9A84C;font-size:20pt;">◆</span></div>`}
+    ${uni ? `<div style="color:#F0D070;font-size:13pt;font-weight:700;letter-spacing:0.5px;margin-bottom:4pt;">${uni}</div>` : ""}
+    ${fac ? `<div style="color:#B8C8E8;font-size:10.5pt;margin-bottom:2pt;">${fac}</div>` : ""}
+    ${dept ? `<div style="color:#8A9FBF;font-size:10pt;">${dept}</div>` : ""}
+  </div>
+  <div style="position:relative;z-index:1;margin:0 36pt;height:1pt;background:linear-gradient(90deg,transparent,#C9A84C,#F0D070,#C9A84C,transparent);flex-shrink:0;"></div>
+  <div style="position:relative;z-index:1;padding:36pt 40pt 30pt;text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center;">
+    <div style="display:inline-block;background:rgba(201,168,76,0.15);border:1.5pt solid #C9A84C;border-radius:20pt;padding:5pt 20pt;margin-bottom:24pt;margin-left:auto;margin-right:auto;">
+      <span style="color:#F0D070;font-size:10pt;font-weight:700;letter-spacing:1px;">${deg || "بحث علمي"}</span>
+    </div>
+    <div style="background:rgba(255,255,255,0.04);border:1pt solid rgba(201,168,76,0.25);border-radius:8pt;padding:26pt 22pt;margin-bottom:0;">
+      <h1 style="color:#FFFFFF;font-size:${Math.min(26, Math.max(17, Math.round(380 / Math.max(title.length, 10))))}pt;font-weight:800;line-height:1.5;margin:0 0 12pt;text-shadow:0 2px 8px rgba(0,0,0,0.4);">${title}</h1>
+      <div style="width:100pt;height:2.5pt;background:linear-gradient(90deg,transparent,#C9A84C,#F0D070,#C9A84C,transparent);margin:0 auto;"></div>
+      ${subtitle ? `<p style="color:#B8C8E8;font-size:12pt;font-style:italic;margin:14pt 0 0;">${subtitle}</p>` : ""}
+    </div>
+  </div>
+  <div style="position:relative;z-index:1;background:rgba(0,0,0,0.4);border-top:1pt solid rgba(201,168,76,0.3);padding:16pt 40pt;flex-shrink:0;">
+    <div style="height:2pt;background:linear-gradient(90deg,transparent,#C9A84C,#F0D070,#C9A84C,transparent);margin-bottom:14pt;"></div>
+    <table style="width:100%;border:none;border-collapse:collapse;">
+      <tr>
+        ${student ? `<td style="color:#E8EEF8;font-size:11pt;padding:3pt 8pt;border:none;text-align:right;"><span style="color:#C9A84C;font-weight:700;">إعداد الطالب: </span>${student}</td>` : "<td style='border:none;'></td>"}
+        ${supervisor ? `<td style="color:#E8EEF8;font-size:11pt;padding:3pt 8pt;border:none;text-align:right;"><span style="color:#C9A84C;font-weight:700;">إشراف: </span>${supervisor}</td>` : "<td style='border:none;'></td>"}
+      </tr>
+      <tr>
+        <td colspan="2" style="border:none;padding:6pt 8pt 0;">
+          <div style="height:1pt;background:rgba(201,168,76,0.2);margin-bottom:6pt;"></div>
+          <div style="text-align:center;color:#8A9FBF;font-size:10pt;">${year || ""}</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>`;
+    }
+
+    if (style === "framed") {
+      return `
+<div style="font-family:'Traditional Arabic','Amiri','Times New Roman',serif;direction:rtl;width:100%;height:100%;background:#F8F4EE;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative;overflow:hidden;box-sizing:border-box;display:flex;flex-direction:column;">
+  <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 595 842" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M 530 15 L 560 15 L 560 8 L 568 8 L 568 45 L 560 45 L 560 22 L 530 22 Z" fill="#1B5E3B" opacity="0.8"/>
+    <path d="M 545 8 L 545 45" stroke="#C9A84C" stroke-width="1" opacity="0.6"/>
+    <path d="M 30 15 L 60 15 L 60 22 L 30 22 L 30 45 L 22 45 L 22 8 L 30 8 Z" fill="#1B5E3B" opacity="0.8"/>
+    <path d="M 15 8 L 15 45" stroke="#C9A84C" stroke-width="1" opacity="0.6"/>
+    <path d="M 530 815 L 560 815 L 560 822 L 568 822 L 568 785 L 560 785 L 560 808 L 530 808 Z" fill="#1B5E3B" opacity="0.8"/>
+    <path d="M 30 815 L 60 815 L 60 808 L 30 808 L 30 785 L 22 785 L 22 822 L 30 822 Z" fill="#1B5E3B" opacity="0.8"/>
+  </svg>
+  <div style="position:absolute;top:12pt;right:12pt;bottom:12pt;left:12pt;border:3pt solid #1B5E3B;"></div>
+  <div style="position:absolute;top:18pt;right:18pt;bottom:18pt;left:18pt;border:1pt solid #C9A84C;"></div>
+  <div style="padding:35pt;position:relative;flex:1;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;">
+    <div style="background:linear-gradient(135deg,#1B5E3B,#2E7D52);border-radius:4pt;padding:14pt 20pt;margin-bottom:10pt;text-align:center;">
+      ${logo ? `<img src="${logo}" style="max-height:55pt;margin-bottom:8pt;filter:brightness(1.1);" /><br/>` : ""}
+      ${uni ? `<div style="color:#F0E6C8;font-size:13pt;font-weight:700;margin-bottom:3pt;">${uni}</div>` : ""}
+      ${fac ? `<div style="color:#B8D4C0;font-size:10.5pt;margin-bottom:2pt;">${fac}</div>` : ""}
+      ${dept ? `<div style="color:#90B89A;font-size:10pt;">${dept}</div>` : ""}
+    </div>
+    <div style="text-align:center;margin:4pt 0;color:#C9A84C;font-size:12pt;letter-spacing:6px;">✦ ✦ ✦</div>
+    <div style="text-align:center;padding:16pt 16pt;border:1.5pt solid #1B5E3B;border-radius:4pt;background:linear-gradient(180deg,rgba(27,94,59,0.04),rgba(27,94,59,0.02));margin:10pt 0 10pt;">
+      ${deg ? `<div style="display:inline-block;background:#1B5E3B;color:#F0E6C8;font-size:10pt;padding:3pt 16pt;border-radius:2pt;margin-bottom:12pt;margin-left:auto;margin-right:auto;">${deg}</div>` : ""}
+      <h1 style="color:#0D3320;font-size:20pt;font-weight:800;line-height:1.5;margin:0 0 8pt;">${title}</h1>
+      <div style="margin:8pt auto;width:120pt;height:0;border-top:2pt solid #C9A84C;"></div>
+      ${subtitle ? `<p style="color:#2E7D52;font-size:11pt;font-style:italic;margin:8pt 0 0;">${subtitle}</p>` : ""}
+    </div>
+    <div style="text-align:center;margin:4pt 0;color:#C9A84C;font-size:12pt;letter-spacing:6px;">◆ ◆ ◆</div>
+    <div style="background:linear-gradient(180deg,rgba(27,94,59,0.06),rgba(201,168,76,0.06));border:1pt solid rgba(27,94,59,0.2);border-radius:4pt;padding:12pt 16pt;margin-top:10pt;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          ${student ? `<td style="padding:4pt 6pt;border:none;text-align:right;font-size:11pt;color:#1B5E3B;"><strong style="color:#0D3320;">إعداد الطالب:</strong> ${student}</td>` : "<td style='border:none;'></td>"}
+          ${supervisor ? `<td style="padding:4pt 6pt;border:none;text-align:right;font-size:11pt;color:#1B5E3B;"><strong style="color:#0D3320;">إشراف الدكتور:</strong> ${supervisor}</td>` : "<td style='border:none;'></td>"}
+        </tr>
+        <tr><td colspan="2" style="border:none;padding:4pt 8pt;"><div style="height:1pt;background:rgba(27,94,59,0.2);"></div></td></tr>
+        <tr>
+          <td style="padding:4pt 6pt;border:none;text-align:center;font-size:10pt;color:#555;" colspan="2">${year || ""}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>`;
+    }
+
+    return `
+<div style="font-family:'Traditional Arabic','Amiri','Times New Roman',serif;direction:rtl;width:100%;height:100%;background:#ffffff;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative;display:flex;flex-direction:column;box-sizing:border-box;">
+  <div style="${frameBorderOuter}"></div>
+  <div style="${frameBorderInner}"></div>
+  <div style="padding:24pt 24pt;display:flex;flex-direction:column;flex:1;justify-content:space-between;box-sizing:border-box;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0;direction:ltr;width:100%;">
+      <div style="text-align:left;direction:ltr;font-family:'Arial','Calibri',sans-serif;font-size:9.5pt;font-weight:700;color:${borderCol};line-height:1.8;flex:1;">
+        Kingdom of Saudi Arabia<br/>
+        Ministry of Education<br/>
+        ${uniEn || (uni ? uni : '')}
+      </div>
+      <div style="text-align:center;flex:0 0 auto;padding:0 12pt;">
+        ${logo ? `<img src="${logo}" style="max-height:60pt;max-width:90pt;display:block;margin:0 auto 5pt;" />` : `<div style="width:45pt;height:45pt;border-radius:50%;border:2pt solid ${borderCol};margin:0 auto 5pt;display:flex;align-items:center;justify-content:center;margin-left:auto;margin-right:auto;"><span style="color:${borderCol};font-size:16pt;">✦</span></div>`}
+        ${uni ? `<div style="color:#1a1a1a;font-size:9.5pt;font-weight:700;font-family:'Traditional Arabic',serif;line-height:1.3;">${uni}</div>` : ''}
+        ${uniEn ? `<div style="color:#1a1a1a;font-size:7.5pt;font-family:'Arial',sans-serif;direction:ltr;">${uniEn}</div>` : ''}
+      </div>
+      <div style="text-align:right;direction:rtl;font-size:10pt;font-weight:700;color:${borderCol};line-height:1.8;flex:1;">
+        المملكة العربية السعودية<br/>
+        وزارة التعليم<br/>
+        ${uni || ''}
+      </div>
+    </div>
+    <div style="height:1pt;background:#cccccc;margin:10pt 0;flex-shrink:0;"></div>
+    <div style="text-align:center;flex-shrink:0;margin-bottom:0;">
+      ${fac ? `<div style="font-size:11pt;color:#333;margin-bottom:3pt;">${fac}</div>` : ''}
+      ${dept ? `<div style="font-size:10pt;color:#555;margin-bottom:6pt;">${dept}</div>` : ''}
+      <h1 style="font-size:${Math.min(22, Math.max(16, Math.round(340 / Math.max(title.length, 8))))}pt;font-weight:800;color:#1a1a1a;line-height:1.5;margin:8pt auto 8pt;max-width:400pt;">${title}</h1>
+      <div style="width:200pt;height:3pt;background:#1a1a1a;margin:0 auto 12pt;"></div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:10pt 0;">
+      ${subtitle ? `<div style="font-size:12pt;color:#333;font-weight:600;margin-bottom:10pt;">${subtitle}</div>` : ''}
+      ${deg ? `<div style="display:inline-block;background:${borderCol};color:#fff;font-size:10pt;padding:4pt 24pt;border-radius:3pt;margin-top:6pt;margin-left:auto;margin-right:auto;">${deg}</div>` : ''}
+    </div>
+    <div style="flex-shrink:0;text-align:center;padding-top:12pt;border-top:0.5pt solid #cccccc;">
+      <div style="font-size:11.5pt;line-height:2.0;color:#1a1a1a;">
+        ${student ? `<div><strong style="color:#1a1a1a;">إعداد الطالب: </strong>${student}</div>` : ''}
+        ${supervisor ? `<div><strong style="color:#1a1a1a;">إشراف الدكتور: </strong>${supervisor}</div>` : ''}
+        ${year ? `<div style="font-size:11pt;color:#444;">${year}</div>` : ''}
+      </div>
+    </div>
+  </div>
+</div>`;
+  };
+
+  const watchedTitle = form.watch("title");
+  const [liveCoverHtml, setLiveCoverHtml] = useState("");
+
+  useEffect(() => {
+    if (!includeCover) {
+      setLiveCoverHtml("");
+      return;
+    }
+
+    let finalLogoUrl = "";
+    if (logoPreset === "ksu") {
+      finalLogoUrl = "https://upload.wikimedia.org/wikipedia/ar/thumb/6/69/%D8%B4%D8%B9%D8%A7%D8%B1_%D8%AC%D8%A7%D9%85%D8%B9%D8%A9_%D8%A7%D9%84%D9%85%D9%84%D9%83_%D8%B3%D8%B9%D9%88%D8%AF.svg/250px-%D8%B4%D8%B9%D8%A7%D8%B1_%D8%AC%D8%A7%D9%85%D8%B9%D8%A9_%D8%A7%D9%84%D9%85%D9%84%D9%83_%D8%B3%D8%B9%D9%88%D8%AF.svg.png";
+    } else if (logoPreset === "kau") {
+      finalLogoUrl = "https://upload.wikimedia.org/wikipedia/ar/thumb/4/4a/%D8%B4%D8%B9%D8%A7%D8%B1_%D8%AC%D8%A7%D9%85%D8%B9%D8%A9_%D8%A7%D9%84%D9%85%D9%84%D9%83_%D8%B9%D8%A8%D8%AF_%D8%A7%D9%84%D8%B9%D8%B2%D9%8A%D8%B2.svg/120px-%D8%B4%D8%B9%D8%A7%D8%B1_%D8%AC%D8%A7%D9%85%D8%B9%D8%A9_%D8%A7%D9%84%D9%85%D9%84%D9%83_%D8%B9%D8%A8%D8%AF_%D8%A7%D9%84%D8%B9%D8%B2%D9%8A%D8%B2.svg.png";
+    } else if (logoPreset === "uqu") {
+      finalLogoUrl = "https://upload.wikimedia.org/wikipedia/ar/thumb/c/c3/Umm_Al-Qura_University_logo.png/250px-Umm_Al-Qura_University_logo.png";
+    } else if (logoPreset === "custom") {
+      finalLogoUrl = logoUrl;
+    }
+
+    const html = getCoverPageHtml(
+      coverStyle,
+      watchedTitle || "عنوان البحث هنا",
+      coverSubtitle,
+      studentName,
+      supervisorName,
+      university,
+      universityEn,
+      faculty,
+      department,
+      degree,
+      academicYear,
+      finalLogoUrl,
+      borderColor
+    );
+    setLiveCoverHtml(html);
+  }, [
+    includeCover,
+    coverStyle,
+    watchedTitle,
+    coverSubtitle,
+    studentName,
+    supervisorName,
+    university,
+    universityEn,
+    faculty,
+    department,
+    degree,
+    academicYear,
+    logoPreset,
+    logoUrl,
+    borderColor,
+    coversData
+  ]);
 
   const togglePart = (partId: string) => {
     setSelectedParts(prev =>
@@ -227,7 +464,9 @@ export function NewProject() {
 
     let coverPageHtml = "";
     if (includeCover) {
-      if (coverStyle === "modern") {
+      if (coverStyle.startsWith("template_")) {
+        coverPageHtml = liveCoverHtml;
+      } else if (coverStyle === "modern") {
         // ═══════════════════════════════════════════════════
         // LEGENDARY MODERN: Deep Royal Blue + Gold Gradient
         // ═══════════════════════════════════════════════════
@@ -452,7 +691,9 @@ export function NewProject() {
         degree,
         year: academicYear,
         logoUrl: finalLogoUrl,
-      } : undefined
+      } : undefined,
+      isCustomTemplateCover: coverStyle.startsWith("template_"),
+      coverTemplateId: coverStyle.startsWith("template_") ? parseInt(coverStyle.replace("template_", ""), 10) : undefined,
     };
 
     createProject.mutate({
@@ -1168,6 +1409,9 @@ export function NewProject() {
                               <SelectItem value="classic">كلاسيكي أكاديمي (Classic Academic)</SelectItem>
                               <SelectItem value="modern">حديث أنيق (Modern Elegant)</SelectItem>
                               <SelectItem value="framed">مؤطر بإطار أنيق (Framed Border)</SelectItem>
+                              {coversData?.items?.map(doc => (
+                                <SelectItem key={doc.id} value={`template_${doc.id}`}>قالب: {doc.title}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -1330,6 +1574,27 @@ export function NewProject() {
                             <Label htmlFor="showPageBorder" className="cursor-pointer select-none">رسم إطار ملون على كافة صفحات البحث</Label>
                           </div>
                         </div>
+
+                        {/* Live Cover Preview */}
+                        {liveCoverHtml && (
+                          <div className="md:col-span-2 mt-6 border rounded-lg overflow-hidden bg-white shadow-sm flex flex-col">
+                            <div className="bg-muted px-4 py-2 border-b text-xs font-semibold text-muted-foreground text-right flex justify-between items-center">
+                              <span>معاينة صفحة الغلاف</span>
+                              <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded font-mono">تحديث تلقائي</span>
+                            </div>
+                            <div className="p-4 flex justify-center bg-slate-100 min-h-[300px] overflow-hidden relative">
+                              <div className="w-[84mm] h-[120mm] overflow-hidden border shadow-lg rounded bg-white relative">
+                                <div className="w-[210mm] h-[297mm] origin-top-left scale-[0.4] absolute top-0 left-0">
+                                  <iframe
+                                    srcDoc={`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/><style>html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: white; }</style></head><body>${liveCoverHtml}</body></html>`}
+                                    className="w-full h-full border-0"
+                                    title="Cover Live Preview"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

@@ -134,8 +134,10 @@ function getEnglishUniversity(arabicName: string): string {
 }
 
 function coverHtml(layout: LayoutMetadata, forDocx = false): string {
-  if (!forDocx && layout.coverPageHtml && layout.coverPageHtml.trim()) {
-    return layout.coverPageHtml;
+  if (layout.coverPageHtml && layout.coverPageHtml.trim()) {
+    if (!forDocx || layout.isCustomTemplateCover) {
+      return layout.coverPageHtml;
+    }
   }
   const c = layout.cover;
   if (!c) return "";

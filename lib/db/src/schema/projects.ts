@@ -120,6 +120,8 @@ export type LayoutMetadata = {
     year?: string;
     logoUrl?: string;
   };
+  isCustomTemplateCover?: boolean;
+  coverTemplateId?: number;
 };
 
 export const projectsTable = pgTable("projects", {
