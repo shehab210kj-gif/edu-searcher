@@ -28,6 +28,7 @@ import {
 } from "../lib/serialize";
 import { parseDocument, extractPdfMetadata, parseDocxToRich } from "../lib/documents";
 import { gemini, GEMINI_MODEL, chatStructured } from "../lib/gemini";
+import { buildFormattedDocument } from "../lib/format-pipeline";
 
 const DOCX_MIME =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -637,6 +638,43 @@ router.post(
       if (!project) {
         res.status(404).json({ error: "المشروع غير موجود" });
         return;
+      }
+
+      const escapeHtml = (str: string) => {
+        return str
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      };
+
+      if (project.documentMode !== "TEMPLATE" && (!project.richContent || !project.richContent.trim())) {
+        const formatted = buildFormattedDocument(project);
+        project.richContent = formatted.blocks.map(block => {
+          const inner = block.runs.map(run => {
+            const styles: string[] = [];
+            if (run.bold) styles.push("font-weight:700");
+            if (run.italic) styles.push("font-style:italic");
+            const styleAttr = styles.length ? ` style="${styles.join(";")}"` : "";
+            return `<span${styleAttr}>${escapeHtml(run.text)}</span>`;
+          }).join("");
+
+          switch (block.style) {
+            case "Title":
+              return `<h1 style="text-align:center;font-weight:bold;margin:24pt 0 12pt;">${inner}</h1>`;
+            case "Heading1":
+              return `<h2 style="font-weight:bold;margin:18pt 0 10pt;">${inner}</h2>`;
+            case "Heading2":
+              return `<h3 style="font-weight:bold;margin:12pt 0 8pt;">${inner}</h3>`;
+            case "ReferencesHeading":
+              return `<h2 style="font-weight:bold;margin:24pt 0 12pt;" class="refs-heading">${inner}</h2>`;
+            case "Reference":
+              return `<p class="reference" style="margin:0 0 8pt;padding-inline-start:1.27cm;text-indent:-1.27cm;">${inner}</p>`;
+            case "Body":
+            default:
+              return `<p style="margin:0 0 10pt;text-indent:1.27cm;">${inner}</p>`;
+          }
+        }).join("\n");
       }
 
       // Insert as previous research document in library
