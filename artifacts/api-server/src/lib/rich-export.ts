@@ -300,14 +300,15 @@ export async function buildDocxFromRich(
   const indexes = generateRichIndexes(project.richContent ?? "");
   const indexesHtml = `${indexes.toc}${indexes.tables ? `<br style="page-break-before: always;" />${indexes.tables}` : ""}${indexes.figures ? `<br style="page-break-before: always;" />${indexes.figures}` : ""}`;
 
-  let body = inlined;
-  if (cover) {
-    body = `${cover}<br style="page-break-before: always;" />${indexesHtml}<br style="page-break-before: always;" />${inlined}`;
-  } else {
-    body = `${indexesHtml}<br style="page-break-before: always;" />${inlined}`;
-  }
+  const styledBody = styleHtmlForDocx(inlined, f, borderColor);
+  const styledIndexes = styleHtmlForDocx(indexesHtml, f, borderColor);
 
-  body = styleHtmlForDocx(body, f, borderColor);
+  let body = styledBody;
+  if (cover) {
+    body = `${cover}<br style="page-break-before: always;" />${styledIndexes}<br style="page-break-before: always;" />${styledBody}`;
+  } else {
+    body = `${styledIndexes}<br style="page-break-before: always;" />${styledBody}`;
+  }
 
   const margins = layout.pageSetup
     ? {
