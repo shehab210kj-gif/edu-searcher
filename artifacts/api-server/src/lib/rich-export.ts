@@ -133,8 +133,8 @@ function getEnglishUniversity(arabicName: string): string {
   return mapping[trimmed] || trimmed;
 }
 
-function coverHtml(layout: LayoutMetadata): string {
-  if (layout.coverPageHtml && layout.coverPageHtml.trim()) {
+function coverHtml(layout: LayoutMetadata, forDocx = false): string {
+  if (!forDocx && layout.coverPageHtml && layout.coverPageHtml.trim()) {
     return layout.coverPageHtml;
   }
   const c = layout.cover;
@@ -263,14 +263,39 @@ function generateRichIndexes(html: string): { toc: string; tables: string; figur
  * keeping cover page, headers/footers, page numbers, RTL direction, tables and
  * inline images. Images are embedded as base64 so the file is self-contained.
  */
+function styleHtmlForDocx(html: string, f: Formatting, borderColor: string): string {
+  let styled = html;
+  
+  styled = styled.replace(/<(h1|h2|h3|p)\b[^>]*>/gi, (match, tag) => {
+    if (match.includes('class="reference"') || match.includes("reference")) {
+      return `<p style="font-size:${f.fontSize}pt;line-height:${f.lineSpacing};text-align:left;font-family:${f.fontFamily};margin:0 0 8pt;padding-left:36pt;text-indent:-36pt;direction:ltr;">`;
+    }
+    
+    switch (tag.toLowerCase()) {
+      case "h1":
+        return `<h1 style="text-align:center;font-weight:bold;font-size:${f.headingSize}pt;color:${borderColor};margin:24pt 0 12pt;font-family:${f.fontFamily};">`;
+      case "h2":
+        return `<h2 style="font-weight:bold;font-size:${f.subheadingSize}pt;color:${borderColor};border-right:4pt solid ${borderColor};padding-right:10pt;margin:18pt 0 10pt;font-family:${f.fontFamily};">`;
+      case "h3":
+        return `<h3 style="font-weight:bold;font-size:${Math.max(f.subheadingSize - 2, 12)}pt;color:${borderColor};margin:12pt 0 8pt;font-family:${f.fontFamily};">`;
+      case "p":
+      default:
+        return `<p style="font-size:${f.fontSize}pt;line-height:${f.lineSpacing};text-align:${f.paragraphAlign || 'justify'};font-family:${f.fontFamily};margin:0 0 10pt;text-indent:36pt;">`;
+    }
+  });
+
+  return styled;
+}
+
 export async function buildDocxFromRich(
   project: RichExportInput,
 ): Promise<Buffer> {
   const layout: LayoutMetadata = project.layoutMetadata ?? {};
   const f: Formatting = project.formatting;
+  const borderColor = layout.borderColor ?? "#1B4FA3";
 
   const inlined = await inlineStorageImages(project.richContent ?? "");
-  const cover = await inlineStorageImages(coverHtml(layout));
+  const cover = await inlineStorageImages(coverHtml(layout, true));
   
   const indexes = generateRichIndexes(project.richContent ?? "");
   const indexesHtml = `${indexes.toc}${indexes.tables ? `<br style="page-break-before: always;" />${indexes.tables}` : ""}${indexes.figures ? `<br style="page-break-before: always;" />${indexes.figures}` : ""}`;
@@ -281,6 +306,8 @@ export async function buildDocxFromRich(
   } else {
     body = `${indexesHtml}<br style="page-break-before: always;" />${inlined}`;
   }
+
+  body = styleHtmlForDocx(body, f, borderColor);
 
   const margins = layout.pageSetup
     ? {
