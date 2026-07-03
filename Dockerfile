@@ -15,6 +15,9 @@ RUN apt-get update && apt-get install -y \
     libxshmfence1 \
     libglu1 \
     chromium \
+    libreoffice \
+    fonts-liberation \
+    fonts-hosny-amiri \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 

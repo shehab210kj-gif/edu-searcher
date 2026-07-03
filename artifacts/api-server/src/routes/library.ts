@@ -370,9 +370,9 @@ router.post("/library/:id/use", async (req, res): Promise<void> => {
     return;
   }
 
-  // TEMPLATE mode: when the original DOCX is preserved in storage,
-  // clone it so the project owns an immutable copy.
-  if (doc.originalFileUrl && doc.fileType === "docx") {
+  // TEMPLATE mode: when the original DOCX is preserved in storage AND the document
+  // is explicitly marked as a template, clone it so the project owns an immutable copy.
+  if (doc.originalFileUrl && doc.fileType === "docx" && doc.isTemplate) {
     try {
       const { buffer } = await downloadObjectToBuffer(doc.originalFileUrl);
       const templateFileUrl = await uploadBuffer(buffer, DOCX_MIME);
