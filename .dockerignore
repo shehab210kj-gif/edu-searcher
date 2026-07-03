@@ -1,0 +1,16 @@
+node_modules
+.git
+.vscode
+.local
+.replit
+.config
+.agents
+scratch
+*.pdf
+*.zip
+*.rar
+*.docx
+Downloads
+الواجبات
+صفحات غلاف
+local-storage

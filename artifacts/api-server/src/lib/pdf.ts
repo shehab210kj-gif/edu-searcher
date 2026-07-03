@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs";
-import puppeteer from "puppeteer-core";
+import puppeteer from "puppeteer";
 import type { Project, Formatting } from "@workspace/db";
 import {
   buildFormattedDocument,
