@@ -119,6 +119,11 @@ export type LayoutMetadata = {
     degree?: string;
     year?: string;
     logoUrl?: string;
+    studentId?: string;
+    section?: string;
+    fieldSupervisor?: string;
+    trainingAgency?: string;
+    courseName?: string;
   };
   isCustomTemplateCover?: boolean;
   coverTemplateId?: number;

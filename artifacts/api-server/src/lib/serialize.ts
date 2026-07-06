@@ -83,6 +83,7 @@ export function serializeLibraryCategory(c: LibraryCategory) {
     id: c.id,
     kind: c.kind,
     name: c.name,
+    parentId: (c as any).parentId ?? null,
     createdAt: c.createdAt.toISOString(),
   };
 }

@@ -144,11 +144,32 @@ export function Templates() {
                       loading="lazy"
                     />
                   ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-indigo-500 to-indigo-700 text-white p-6 text-center">
-                      <Sparkles className="w-10 h-10 mb-3 opacity-80" />
-                      <span className="font-bold text-sm line-clamp-3 leading-relaxed">
-                        {doc.title}
-                      </span>
+                    <div className="w-full h-full flex flex-col bg-white p-3 border-b relative select-none">
+                      {/* Miniature Page Decoration */}
+                      <div className="border border-slate-200 w-full h-full p-3 rounded-sm flex flex-col gap-1.5 relative bg-[#fafafa] shadow-inner overflow-hidden text-right">
+                        <div className="text-[10px] font-bold text-indigo-600 border-b border-indigo-200 pb-1 flex justify-between items-center">
+                          <span>{doc.university || "قالب جاهز"}</span>
+                          <span className="text-[8px] bg-indigo-50 text-indigo-600 px-1.5 rounded">{doc.department || "غلاف"}</span>
+                        </div>
+                        <div className="font-extrabold text-xs text-slate-800 line-clamp-3 leading-relaxed mt-1 text-center">
+                          {doc.title}
+                        </div>
+                        <div className="w-8 h-0.5 bg-amber-500 mx-auto my-0.5"></div>
+                        {doc.description ? (
+                          <div className="text-[9.5px] text-slate-500 line-clamp-5 leading-relaxed">
+                            {doc.description}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-1 mt-1">
+                            <div className="h-1.5 bg-slate-200 rounded w-5/6"></div>
+                            <div className="h-1.5 bg-slate-200 rounded w-full"></div>
+                            <div className="h-1.5 bg-slate-200 rounded w-4/5"></div>
+                            <div className="h-1.5 bg-slate-200 rounded w-full"></div>
+                          </div>
+                        )}
+                        {/* Fade out bottom overlay */}
+                        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[#fafafa] to-transparent pointer-events-none" />
+                      </div>
                     </div>
                   )}
                   {doc.university && (
@@ -168,7 +189,7 @@ export function Templates() {
                   </CardDescription>
                 </CardHeader>
                 <CardFooter className="p-4 pt-0 gap-2 mt-auto border-t bg-muted/5 flex">
-                  <Link href={`/library/${doc.id}`} className="flex-1">
+                  <Link href={`/library/${doc.id}?back=templates`} className="flex-1">
                     <Button variant="outline" size="sm" className="w-full gap-1.5">
                       <Eye className="w-4 h-4" />
                       معاينة

@@ -179,10 +179,14 @@ function coverHtml(layout: LayoutMetadata, forDocx = false): string {
     c.subtitle
       ? `<p style="text-align:center; font-size:14pt; font-style:italic; margin-top:12pt; margin-bottom:60pt;">${c.subtitle}</p>`
       : "",
-    `<div style="margin-top: 100pt; text-align: center; font-size: 14pt; line-height: 2.0; font-family: 'Amiri', serif;">
+    `<div style="margin-top: 60pt; text-align: center; font-size: 14pt; line-height: 2.0; font-family: 'Amiri', serif;">
       ${c.studentName ? `<p>إعداد الطالب/الطالبة: <strong>${c.studentName}</strong></p>` : ""}
+      ${(c as any).studentId ? `<p>الرقم الجامعي: <strong>${(c as any).studentId}</strong></p>` : ""}
+      ${(c as any).section ? `<p>الشعبة: <strong>${(c as any).section}</strong></p>` : ""}
       ${c.supervisor ? `<p>إشراف الدكتور/الأستاذ: <strong>${c.supervisor}</strong></p>` : ""}
-      ${c.degree ? `<p>متطلب لنيل درجة: <strong>${c.degree}</strong></p>` : ""}
+      ${(c as any).fieldSupervisor ? `<p>المشرف الميداني: <strong>${(c as any).fieldSupervisor}</strong></p>` : ""}
+      ${(c as any).courseName ? `<p>المقرر: <strong>${(c as any).courseName}</strong></p>` : ""}
+      ${(c as any).trainingAgency ? `<p>جهة التدريب: <strong>${(c as any).trainingAgency}</strong></p>` : ""}
       ${c.year ? `<p>العام الجامعي: <strong>${c.year}</strong></p>` : ""}
     </div>`
   ];

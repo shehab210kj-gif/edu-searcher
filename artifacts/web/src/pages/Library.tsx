@@ -6,6 +6,7 @@ import {
   useUploadLibraryDocument,
   useSmartSearchLibrary,
   useUseLibraryDocument,
+  useListLibraryCategories,
   type FacetCount,
   type LibraryDocumentSummary,
 } from "@workspace/api-client-react";
@@ -22,6 +23,13 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
   Search,
@@ -39,6 +47,9 @@ import {
   Loader2,
   FileText,
   FileImage,
+  Plus,
+  Trash,
+  Edit,
 } from "lucide-react";
 import {
   resolveStorageUrl,
@@ -107,11 +118,32 @@ function ResearchCard({ doc }: { doc: LibraryDocumentSummary }) {
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-primary/90 to-primary text-primary-foreground p-6 text-center">
-            <BookOpen className="w-10 h-10 mb-3 opacity-80" />
-            <span className="font-bold text-sm line-clamp-4 leading-relaxed">
-              {doc.title}
-            </span>
+          <div className="w-full h-full flex flex-col bg-white p-3 border-b relative select-none">
+            {/* Miniature Page Decoration */}
+            <div className="border border-slate-200 w-full h-full p-3 rounded-sm flex flex-col gap-1.5 relative bg-[#fafafa] shadow-inner overflow-hidden text-right">
+              <div className="text-[10px] font-bold text-primary border-b border-primary/20 pb-1 flex justify-between items-center">
+                <span>{doc.university || "جامعة"}</span>
+                <span className="text-[8px] bg-primary/10 px-1.5 rounded">{doc.department || "تخصص"}</span>
+              </div>
+              <div className="font-extrabold text-xs text-slate-800 line-clamp-3 leading-relaxed mt-1 text-center">
+                {doc.title}
+              </div>
+              <div className="w-8 h-0.5 bg-amber-500 mx-auto my-0.5"></div>
+              {doc.description ? (
+                <div className="text-[9.5px] text-slate-500 line-clamp-5 leading-relaxed">
+                  {doc.description}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1 mt-1">
+                  <div className="h-1.5 bg-slate-200 rounded w-5/6"></div>
+                  <div className="h-1.5 bg-slate-200 rounded w-full"></div>
+                  <div className="h-1.5 bg-slate-200 rounded w-4/5"></div>
+                  <div className="h-1.5 bg-slate-200 rounded w-full"></div>
+                </div>
+              )}
+              {/* Fade out bottom overlay */}
+              <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[#fafafa] to-transparent pointer-events-none" />
+            </div>
           </div>
         )}
         <div className="absolute top-2 left-2">
@@ -200,6 +232,22 @@ export function Library() {
   const [matchOpen, setMatchOpen] = useState(false);
   const [matchFile, setMatchFile] = useState<File | null>(null);
   const [matchResults, setMatchResults] = useState<any[]>([]);
+
+  // Taxonomy categories states
+  const [taxonomyOpen, setTaxonomyOpen] = useState(false);
+  const { data: categories, refetch: refetchCategories } = useListLibraryCategories();
+
+  const universities = useMemo(() => {
+    return categories ? categories.filter((c: any) => c.kind === "university") : [];
+  }, [categories]);
+
+  const selectedUni = useMemo(() => {
+    return categories && uploadUni ? categories.find((c: any) => c.name === uploadUni && c.kind === "university") : null;
+  }, [categories, uploadUni]);
+
+  const selectedUniDepts = useMemo(() => {
+    return categories && selectedUni ? categories.filter((c: any) => c.kind === "department" && c.parentId === selectedUni.id) : [];
+  }, [categories, selectedUni]);
 
   // Mutation hooks
   const uploadDoc = useUploadLibraryDocument();
@@ -471,6 +519,29 @@ export function Library() {
             </DialogContent>
           </Dialog>
 
+          {/* Taxonomy Management Dialog */}
+          <Dialog open={taxonomyOpen} onOpenChange={setTaxonomyOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2 border-indigo-200 hover:border-indigo-500 hover:bg-indigo-50/30">
+                <Building2 className="w-4 h-4 text-indigo-500" />
+                إدارة الجامعات والتخصصات
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" dir="rtl">
+              <DialogHeader>
+                <DialogTitle className="text-right text-xl font-bold flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-indigo-600" />
+                  إدارة هيكل الجامعات والتخصصات
+                </DialogTitle>
+                <DialogDescription className="text-right">
+                  أضف الجامعات المختلفة، ثم أضف الأقسام أو التخصصات التابعة لكل جامعة لترتيب مكتبتك البحثية بشكل هرمي متناسق.
+                </DialogDescription>
+              </DialogHeader>
+
+              <CategoryManager categories={categories || []} refetch={refetchCategories} />
+            </DialogContent>
+          </Dialog>
+
           {/* Upload Old Research Button & Modal */}
           <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
             <DialogTrigger asChild>
@@ -536,11 +607,19 @@ export function Library() {
                 <div className="grid grid-cols-2 gap-2 text-right">
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold">الجامعة</label>
-                    <Input
-                      value={uploadUni}
-                      onChange={(e) => setUploadUni(e.target.value)}
-                      placeholder="جامعة الملك سعود..."
-                    />
+                    <Select value={uploadUni} onValueChange={(val) => {
+                      setUploadUni(val);
+                      setUploadDept("");
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر الجامعة" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {universities.map(uni => (
+                          <SelectItem key={uni.id} value={uni.name}>{uni.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold">الدرجة العلمية</label>
@@ -555,11 +634,16 @@ export function Library() {
                 <div className="grid grid-cols-2 gap-2 text-right">
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold">القسم</label>
-                    <Input
-                      value={uploadDept}
-                      onChange={(e) => setUploadDept(e.target.value)}
-                      placeholder="علوم الحاسب..."
-                    />
+                    <Select value={uploadDept} onValueChange={setUploadDept} disabled={!uploadUni}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={uploadUni ? "اختر القسم" : "اختر الجامعة أولاً"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedUniDepts.map(dept => (
+                          <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold">التصنيف</label>
@@ -649,7 +733,75 @@ export function Library() {
             </div>
           )}
 
+          {/* Custom University & Department Hierarchical Taxonomy Filter */}
+          {(() => {
+            const uniFacet = facets?.universities ?? [];
+            const deptFacet = facets?.departments ?? [];
+            if (uniFacet.length === 0) return null;
+
+            return (
+              <div className="space-y-2 border-b pb-4">
+                <h3 className="text-sm font-bold text-foreground/80 flex items-center gap-1.5">
+                  <Building2 className="w-4 h-4 text-indigo-500" />
+                  الجامعات والتخصصات
+                </h3>
+                <div className="space-y-1.5 mr-1">
+                  {uniFacet.map((uniItem) => {
+                    const activeUni = filters.university === uniItem.value;
+                    const uniCat = categories?.find((c: any) => c.name === uniItem.value && c.kind === "university");
+                    const childDeptNames = uniCat 
+                      ? categories?.filter((c: any) => c.kind === "department" && c.parentId === uniCat.id).map((c: any) => c.name) || []
+                      : [];
+                    const matchingDepts = deptFacet.filter(d => childDeptNames.includes(d.value));
+
+                    return (
+                      <div key={uniItem.value} className="space-y-1">
+                        <button
+                          onClick={() => toggleFilter("university", uniItem.value)}
+                          className={cn(
+                            "w-full flex items-center justify-between text-sm px-2.5 py-1.5 rounded-md transition-colors text-right font-medium",
+                            activeUni
+                              ? "bg-primary text-primary-foreground"
+                              : "hover:bg-muted text-foreground/80",
+                          )}
+                        >
+                          <span className="line-clamp-1">{uniItem.value}</span>
+                          <span className="text-xs px-1.5 rounded bg-muted/40">{uniItem.count}</span>
+                        </button>
+
+                        {/* Indented child departments */}
+                        {matchingDepts.length > 0 && (
+                          <div className="mr-3 border-r pr-2 border-indigo-100/50 space-y-0.5 mt-0.5">
+                            {matchingDepts.map(deptItem => {
+                              const activeDept = filters.department === deptItem.value;
+                              return (
+                                <button
+                                  key={deptItem.value}
+                                  onClick={() => toggleFilter("department", deptItem.value)}
+                                  className={cn(
+                                    "w-full flex items-center justify-between text-xs px-2 py-1.5 rounded-md transition-colors text-right",
+                                    activeDept
+                                      ? "bg-indigo-600 text-white font-semibold"
+                                      : "hover:bg-slate-50 text-slate-600",
+                                  )}
+                                >
+                                  <span className="line-clamp-1">{deptItem.value}</span>
+                                  <span className="text-[10px] opacity-75">{deptItem.count}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
           {FILTER_GROUPS.map((group) => {
+            if (group.key === "university" || group.key === "department") return null;
             const items = (facets?.[group.facet] ?? []) as FacetCount[];
             if (items.length === 0) return null;
             return (
@@ -756,6 +908,215 @@ export function Library() {
             </Card>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function CategoryManager({ categories, refetch }: { categories: any[]; refetch: () => void }) {
+  const { toast } = useToast();
+  const [newUniName, setNewUniName] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [newDeptNames, setNewDeptNames] = useState<Record<number, string>>({});
+
+  const universities = useMemo(() => {
+    return categories ? categories.filter((c: any) => c.kind === "university") : [];
+  }, [categories]);
+
+  const handleAddUniversity = async () => {
+    if (!newUniName.trim()) return;
+    try {
+      const res = await fetch("/api/library/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newUniName.trim(), kind: "university" })
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: "تم إضافة الجامعة بنجاح" });
+      setNewUniName("");
+      refetch();
+    } catch (err) {
+      toast({ title: "فشل إضافة الجامعة", variant: "destructive" });
+    }
+  };
+
+  const handleAddDepartment = async (uniId: number) => {
+    const name = newDeptNames[uniId] || "";
+    if (!name.trim()) return;
+    try {
+      const res = await fetch("/api/library/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), kind: "department", parentId: uniId })
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: "تم إضافة التخصص بنجاح" });
+      setNewDeptNames(prev => ({ ...prev, [uniId]: "" }));
+      refetch();
+    } catch (err) {
+      toast({ title: "فشل إضافة التخصص", variant: "destructive" });
+    }
+  };
+
+  const handleSaveEdit = async (id: number) => {
+    if (!editingName.trim()) return;
+    try {
+      const res = await fetch(`/api/library/categories/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editingName.trim() })
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: "تم التعديل بنجاح" });
+      setEditingId(null);
+      setEditingName("");
+      refetch();
+    } catch (err) {
+      toast({ title: "فشل التعديل", variant: "destructive" });
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("هل أنت متأكد من الحذف؟ سيؤدي هذا لحذف التخصصات المرتبطة أيضاً.")) return;
+    try {
+      const res = await fetch(`/api/library/categories/${id}`, {
+        method: "DELETE"
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: "تم الحذف بنجاح" });
+      refetch();
+    } catch (err) {
+      toast({ title: "فشل الحذف", variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="space-y-6 text-right mt-4" dir="rtl">
+      <div className="bg-muted/30 p-4 rounded-lg border flex gap-2 items-end">
+        <div className="flex-1 space-y-1.5">
+          <label className="text-sm font-semibold text-slate-700">إضافة جامعة جديدة</label>
+          <Input 
+            placeholder="مثال: جامعة الملك سعود، جامعة صنعاء..."
+            value={newUniName}
+            onChange={(e) => setNewUniName(e.target.value)}
+          />
+        </div>
+        <Button onClick={handleAddUniversity} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 shrink-0">
+          <Plus className="w-4 h-4" />
+          إضافة جامعة
+        </Button>
+      </div>
+
+      <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
+        {universities.map((uni: any) => {
+          const depts = categories.filter((c: any) => c.kind === "department" && c.parentId === uni.id);
+          return (
+            <div key={uni.id} className="border rounded-lg p-4 bg-white shadow-sm space-y-3">
+              <div className="flex justify-between items-center border-b pb-2">
+                {editingId === uni.id ? (
+                  <div className="flex gap-1.5 flex-1 max-w-sm">
+                    <Input 
+                      value={editingName} 
+                      onChange={(e) => setEditingName(e.target.value)} 
+                      className="h-8"
+                    />
+                    <Button size="sm" onClick={() => handleSaveEdit(uni.id)}>حفظ</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>إلغاء</Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 font-bold text-slate-800 text-base">
+                    <Building2 className="w-4 h-4 text-indigo-500" />
+                    <span>{uni.name}</span>
+                  </div>
+                )}
+
+                <div className="flex gap-1">
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="h-7 w-7 text-slate-400 hover:text-slate-700"
+                    onClick={() => { setEditingId(uni.id); setEditingName(uni.name); }}
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="h-7 w-7 text-red-400 hover:text-red-600"
+                    onClick={() => handleDelete(uni.id)}
+                  >
+                    <Trash className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mr-4 space-y-1.5 border-r pr-3 border-slate-100">
+                {depts.map((dept: any) => (
+                  <div key={dept.id} className="flex justify-between items-center bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 group">
+                    {editingId === dept.id ? (
+                      <div className="flex gap-1.5 flex-1 max-w-xs">
+                        <Input 
+                          value={editingName} 
+                          onChange={(e) => setEditingName(e.target.value)} 
+                          className="h-7 text-xs"
+                        />
+                        <Button size="sm" className="h-7 px-2 text-xs" onClick={() => handleSaveEdit(dept.id)}>حفظ</Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setEditingId(null)}>إلغاء</Button>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-slate-600 flex items-center gap-1.5">
+                        <GraduationCap className="w-3.5 h-3.5 text-slate-400" />
+                        {dept.name}
+                      </span>
+                    )}
+
+                    <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-6 w-6 text-slate-400 hover:text-slate-600"
+                        onClick={() => { setEditingId(dept.id); setEditingName(dept.name); }}
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-6 w-6 text-red-400 hover:text-red-600"
+                        onClick={() => handleDelete(dept.id)}
+                      >
+                        <Trash className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="flex gap-1.5 pt-1.5">
+                  <Input 
+                    placeholder="إضافة تخصص جديد للجامعة..."
+                    value={newDeptNames[uni.id] || ""}
+                    onChange={(e) => setNewDeptNames(prev => ({ ...prev, [uni.id]: e.target.value }))}
+                    className="h-8 text-xs flex-1"
+                  />
+                  <Button 
+                    size="sm" 
+                    onClick={() => handleAddDepartment(uni.id)} 
+                    className="h-8 text-xs bg-slate-800 hover:bg-slate-900 text-white gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    إضافة
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {universities.length === 0 && (
+          <div className="text-center py-6 text-muted-foreground text-sm">
+            لا توجد جامعات مضافة حالياً. يرجى إضافة جامعة أولاً.
+          </div>
+        )}
       </div>
     </div>
   );

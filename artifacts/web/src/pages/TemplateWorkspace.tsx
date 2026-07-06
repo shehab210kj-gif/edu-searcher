@@ -154,7 +154,7 @@ export function TemplateWorkspace({ project }: { project: Project }) {
             <CardTitle>تحرير المستند</CardTitle>
             <CardDescription>اكتب داخل الصفحة كما في وورد</CardDescription>
           </CardHeader>
-          <CardContent className="p-4 bg-slate-100 max-h-[72vh] overflow-auto">
+          <CardContent className="p-4 bg-slate-100 h-[calc(100vh-16rem)] min-h-[480px] overflow-y-auto">
             {paragraphs.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
                 لا توجد نصوص قابلة للتعديل في هذا القالب.
@@ -189,8 +189,8 @@ export function TemplateWorkspace({ project }: { project: Project }) {
               تحديث المعاينة
             </Button>
           </CardHeader>
-          <CardContent className="p-4 bg-slate-100 max-h-[72vh] overflow-auto">
-            <PdfPreview src={previewSrc} reloadKey={previewVersion} />
+          <CardContent className="p-4 bg-slate-100 h-[calc(100vh-16rem)] min-h-[480px] overflow-y-auto flex flex-col justify-stretch">
+            <PdfPreview src={previewSrc} reloadKey={previewVersion} className="flex-1" />
           </CardContent>
         </Card>
       </div>

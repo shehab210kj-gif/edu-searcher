@@ -144,6 +144,7 @@ export function NewProject() {
   const [showPageNumbers, setShowPageNumbers] = useState(true);
   const [pageNumberFormat, setPageNumberFormat] = useState("1, 2, 3");
   const [pageNumberAlign, setPageNumberAlign] = useState<"left" | "center" | "right">("center");
+  const [targetPageCount, setTargetPageCount] = useState("unlimited");
 
   // Tab 4: Cover details
   const [includeCover, setIncludeCover] = useState(true);
@@ -156,12 +157,27 @@ export function NewProject() {
   const [department, setDepartment] = useState("");
   const [degree, setDegree] = useState("");
   const [academicYear, setAcademicYear] = useState("");
+  const [studentId, setStudentId] = useState("");
+  const [section, setSection] = useState("");
+  const [fieldSupervisor, setFieldSupervisor] = useState("");
+  const [trainingAgency, setTrainingAgency] = useState("");
+  const [courseName, setCourseName] = useState("");
   const [coverStyle, setCoverStyle] = useState("classic");
   const [logoPreset, setLogoPreset] = useState("default");
   const [logoUrl, setLogoUrl] = useState("");
   // Border frame
   const [borderColor, setBorderColor] = useState("#1B4FA3");
   const [showPageBorder, setShowPageBorder] = useState(true);
+
+  // Custom cover layout options
+  const [detailsAlign, setDetailsAlign] = useState<"right" | "center" | "left">("center");
+  const [headerLayout, setHeaderLayout] = useState<"logo-center" | "logo-right" | "logo-left">("logo-center");
+  const [arabicHeader1, setArabicHeader1] = useState("المملكة العربية السعودية");
+  const [arabicHeader2, setArabicHeader2] = useState("وزارة التعليم");
+  const [arabicHeader3, setArabicHeader3] = useState("");
+  const [englishHeader1, setEnglishHeader1] = useState("Kingdom of Saudi Arabia");
+  const [englishHeader2, setEnglishHeader2] = useState("Ministry of Education");
+  const [englishHeader3, setEnglishHeader3] = useState("");
 
   const [enableSpellCheck, setEnableSpellCheck] = useState(true);
   const [enableDuplicateCheck, setEnableDuplicateCheck] = useState(true);
@@ -205,7 +221,20 @@ export function NewProject() {
     deg: string,
     year: string,
     logo: string,
-    borderCol: string
+    borderCol: string,
+    sId?: string,
+    sect?: string,
+    fieldSup?: string,
+    trainAgency?: string,
+    cName?: string,
+    detailsAlign?: string,
+    headerLayout?: string,
+    arLine1?: string,
+    arLine2?: string,
+    arLine3?: string,
+    enLine1?: string,
+    enLine2?: string,
+    enLine3?: string
   ) => {
     if (style.startsWith("template_")) {
       if (selectedCoverTemplate && selectedCoverTemplate.richContent) {
@@ -217,7 +246,12 @@ export function NewProject() {
           .replace(/{faculty}/g, fac || "")
           .replace(/{department}/g, dept || "")
           .replace(/{degree}/g, deg || "")
-          .replace(/{year}/g, year || "");
+          .replace(/{year}/g, year || "")
+          .replace(/{studentId}/g, sId || "")
+          .replace(/{section}/g, sect || "")
+          .replace(/{fieldSupervisor}/g, fieldSup || "")
+          .replace(/{trainingAgency}/g, trainAgency || "")
+          .replace(/{courseName}/g, cName || "");
       }
       return "";
     }
@@ -248,21 +282,31 @@ export function NewProject() {
       <h1 style="color:#FFFFFF;font-size:${Math.min(26, Math.max(17, Math.round(380 / Math.max(title.length, 10))))}pt;font-weight:800;line-height:1.5;margin:0 0 12pt;text-shadow:0 2px 8px rgba(0,0,0,0.4);">${title}</h1>
       <div style="width:100pt;height:2.5pt;background:linear-gradient(90deg,transparent,#C9A84C,#F0D070,#C9A84C,transparent);margin:0 auto;"></div>
       ${subtitle ? `<p style="color:#B8C8E8;font-size:12pt;font-style:italic;margin:14pt 0 0;">${subtitle}</p>` : ""}
+      ${cName ? `<p style="color:#B8C8E8;font-size:11pt;margin:10pt 0 0;"><span style="color:#C9A84C;font-weight:700;">المقرر: </span>${cName}</p>` : ''}
+      ${trainAgency ? `<p style="color:#B8C8E8;font-size:11pt;margin:6pt 0 0;"><span style="color:#C9A84C;font-weight:700;">جهة التدريب: </span>${trainAgency}</p>` : ''}
     </div>
   </div>
   <div style="position:relative;z-index:1;background:rgba(0,0,0,0.4);border-top:1pt solid rgba(201,168,76,0.3);padding:16pt 40pt;flex-shrink:0;">
     <div style="height:2pt;background:linear-gradient(90deg,transparent,#C9A84C,#F0D070,#C9A84C,transparent);margin-bottom:14pt;"></div>
-    <table style="width:100%;border:none;border-collapse:collapse;">
+    <table style="width:100%;border:none;border-collapse:collapse;color:#E8EEF8;font-size:11pt;">
       <tr>
-        ${student ? `<td style="color:#E8EEF8;font-size:11pt;padding:3pt 8pt;border:none;text-align:right;"><span style="color:#C9A84C;font-weight:700;">إعداد الطالب: </span>${student}</td>` : "<td style='border:none;'></td>"}
-        ${supervisor ? `<td style="color:#E8EEF8;font-size:11pt;padding:3pt 8pt;border:none;text-align:right;"><span style="color:#C9A84C;font-weight:700;">إشراف: </span>${supervisor}</td>` : "<td style='border:none;'></td>"}
+        ${student ? `<td style="padding:3pt 8pt;border:none;text-align:right;"><span style="color:#C9A84C;font-weight:700;">إعداد الطالب: </span>${student}</td>` : "<td style='border:none;'></td>"}
+        ${supervisor ? `<td style="padding:3pt 8pt;border:none;text-align:right;"><span style="color:#C9A84C;font-weight:700;">إشراف: </span>${supervisor}</td>` : "<td style='border:none;'></td>"}
       </tr>
+      ${(sId || fieldSup) ? `
       <tr>
-        <td colspan="2" style="border:none;padding:6pt 8pt 0;">
-          <div style="height:1pt;background:rgba(201,168,76,0.2);margin-bottom:6pt;"></div>
-          <div style="text-align:center;color:#8A9FBF;font-size:10pt;">${year || ""}</div>
-        </td>
+        ${sId ? `<td style="padding:3pt 8pt;border:none;text-align:right;"><span style="color:#C9A84C;font-weight:700;">الرقم الجامعي: </span>${sId}</td>` : "<td style='border:none;'></td>"}
+        ${fieldSup ? `<td style="padding:3pt 8pt;border:none;text-align:right;"><span style="color:#C9A84C;font-weight:700;">المشرف الميداني: </span>${fieldSup}</td>` : "<td style='border:none;'></td>"}
       </tr>
+      ` : ""}
+      ${(sect || year) ? `
+      <tr>
+        ${sect ? `<td style="padding:3pt 8pt;border:none;text-align:right;"><span style="color:#C9A84C;font-weight:700;">الشعبة: </span>${sect}</td>` : "<td style='border:none;'></td>"}
+        <td style="padding:3pt 8pt;border:none;text-align:right;color:#8A9FBF;">${year || ""}</td>
+      </tr>
+      ` : `
+      <tr><td colspan="2" style="border:none;padding:6pt 8pt 0;"><div style="text-align:center;color:#8A9FBF;font-size:10pt;">${year || ""}</div></td></tr>
+      `}
     </table>
   </div>
 </div>`;
@@ -294,14 +338,27 @@ export function NewProject() {
       <h1 style="color:#0D3320;font-size:20pt;font-weight:800;line-height:1.5;margin:0 0 8pt;">${title}</h1>
       <div style="margin:8pt auto;width:120pt;height:0;border-top:2pt solid #C9A84C;"></div>
       ${subtitle ? `<p style="color:#2E7D52;font-size:11pt;font-style:italic;margin:8pt 0 0;">${subtitle}</p>` : ""}
+      ${cName ? `<p style="color:#2E7D52;font-size:11pt;margin:6pt 0 0;"><strong style="color:#0D3320;">المقرر:</strong> ${cName}</p>` : ''}
+      ${trainAgency ? `<p style="color:#2E7D52;font-size:11pt;margin:4pt 0 0;"><strong style="color:#0D3320;">جهة التدريب:</strong> ${trainAgency}</p>` : ''}
     </div>
     <div style="text-align:center;margin:4pt 0;color:#C9A84C;font-size:12pt;letter-spacing:6px;">◆ ◆ ◆</div>
     <div style="background:linear-gradient(180deg,rgba(27,94,59,0.06),rgba(201,168,76,0.06));border:1pt solid rgba(27,94,59,0.2);border-radius:4pt;padding:12pt 16pt;margin-top:10pt;">
-      <table style="width:100%;border-collapse:collapse;">
+      <table style="width:100%;border-collapse:collapse;font-size:11pt;color:#1B5E3B;">
         <tr>
-          ${student ? `<td style="padding:4pt 6pt;border:none;text-align:right;font-size:11pt;color:#1B5E3B;"><strong style="color:#0D3320;">إعداد الطالب:</strong> ${student}</td>` : "<td style='border:none;'></td>"}
-          ${supervisor ? `<td style="padding:4pt 6pt;border:none;text-align:right;font-size:11pt;color:#1B5E3B;"><strong style="color:#0D3320;">إشراف الدكتور:</strong> ${supervisor}</td>` : "<td style='border:none;'></td>"}
+          ${student ? `<td style="padding:4pt 6pt;border:none;text-align:right;"><strong style="color:#0D3320;">إعداد الطالب:</strong> ${student}</td>` : "<td style='border:none;'></td>"}
+          ${supervisor ? `<td style="padding:4pt 6pt;border:none;text-align:right;"><strong style="color:#0D3320;">إشراف الدكتور:</strong> ${supervisor}</td>` : "<td style='border:none;'></td>"}
         </tr>
+        ${(sId || fieldSup) ? `
+        <tr>
+          ${sId ? `<td style="padding:4pt 6pt;border:none;text-align:right;"><strong style="color:#0D3320;">الرقم الجامعي:</strong> ${sId}</td>` : "<td style='border:none;'></td>"}
+          ${fieldSup ? `<td style="padding:4pt 6pt;border:none;text-align:right;"><strong style="color:#0D3320;">المشرف الميداني:</strong> ${fieldSup}</td>` : "<td style='border:none;'></td>"}
+        </tr>
+        ` : ""}
+        ${sect ? `
+        <tr>
+          <td style="padding:4pt 6pt;border:none;text-align:right;" colspan="2"><strong style="color:#0D3320;">الشعبة:</strong> ${sect}</td>
+        </tr>
+        ` : ""}
         <tr><td colspan="2" style="border:none;padding:4pt 8pt;"><div style="height:1pt;background:rgba(27,94,59,0.2);"></div></td></tr>
         <tr>
           <td style="padding:4pt 6pt;border:none;text-align:center;font-size:10pt;color:#555;" colspan="2">${year || ""}</td>
@@ -312,27 +369,81 @@ export function NewProject() {
 </div>`;
     }
 
+    const arL1 = arLine1 || "المملكة العربية السعودية";
+    const arL2 = arLine2 || "وزارة التعليم";
+    const arL3 = arLine3 || uni || "";
+    const enL1 = enLine1 || "Kingdom of Saudi Arabia";
+    const enL2 = enLine2 || "Ministry of Education";
+    const enL3 = enLine3 || uniEn || (uni ? uni : "");
+
+    const alignClass = detailsAlign || "center"; // "right" | "left" | "center"
+
+    // Construct Columns Order based on headerLayout
+    let leftColumnContent = `
+      <div style="text-align:left;direction:ltr;font-family:'Arial','Calibri',sans-serif;font-size:9.5pt;font-weight:700;color:${borderCol};line-height:1.8;flex:1;">
+        ${enL1}<br/>
+        ${enL2}<br/>
+        ${enL3}
+      </div>
+    `;
+    let centerColumnContent = `
+      <div style="text-align:center;flex:0 0 auto;padding:0 12pt;">
+        ${logo ? `<img src="${logo}" style="max-height:60pt;max-width:90pt;display:block;margin:0 auto 5pt;" />` : `<div style="width:45pt;height:45pt;border-radius:50%;border:2pt solid ${borderCol};margin:0 auto 5pt;display:flex;align-items:center;justify-content:center;margin-left:auto;margin-right:auto;"><span style="color:${borderCol};font-size:16pt;">✦</span></div>`}
+      </div>
+    `;
+    let rightColumnContent = `
+      <div style="text-align:right;direction:rtl;font-size:10pt;font-weight:700;color:${borderCol};line-height:1.8;flex:1;">
+        ${arL1}<br/>
+        ${arL2}<br/>
+        ${arL3}
+        ${fac ? `<br/>${fac}` : ''}
+        ${dept ? `<br/>${dept}` : ''}
+      </div>
+    `;
+
+    if (headerLayout === "logo-right") {
+      // Logo on right, stacked header on left
+      rightColumnContent = `
+        <div style="text-align:right;flex:0 0 auto;padding:0 12pt;">
+          ${logo ? `<img src="${logo}" style="max-height:60pt;max-width:90pt;display:block;margin:0 auto 5pt;" />` : `<div style="width:45pt;height:45pt;border-radius:50%;border:2pt solid ${borderCol};margin:0 auto 5pt;display:flex;align-items:center;justify-content:center;margin-left:auto;margin-right:auto;"><span style="color:${borderCol};font-size:16pt;">✦</span></div>`}
+        </div>
+      `;
+      centerColumnContent = `<div style="flex:1;"></div>`;
+      leftColumnContent = `
+        <div style="text-align:left;direction:ltr;font-family:'Arial','Calibri',sans-serif;font-size:9.5pt;font-weight:700;color:${borderCol};line-height:1.8;flex:1;">
+          ${enL1}<br/>${enL2}<br/>${enL3}
+          <div style="margin-top:10pt;text-align:left;direction:rtl;font-size:10pt;font-family:'Traditional Arabic',serif;">
+            ${arL1}<br/>${arL2}<br/>${arL3}${fac ? `<br/>${fac}` : ''}${dept ? `<br/>${dept}` : ''}
+          </div>
+        </div>
+      `;
+    } else if (headerLayout === "logo-left") {
+      // Logo on left, stacked header on right
+      leftColumnContent = `
+        <div style="text-align:left;flex:0 0 auto;padding:0 12pt;">
+          ${logo ? `<img src="${logo}" style="max-height:60pt;max-width:90pt;display:block;margin:0 auto 5pt;" />` : `<div style="width:45pt;height:45pt;border-radius:50%;border:2pt solid ${borderCol};margin:0 auto 5pt;display:flex;align-items:center;justify-content:center;margin-left:auto;margin-right:auto;"><span style="color:${borderCol};font-size:16pt;">✦</span></div>`}
+        </div>
+      `;
+      centerColumnContent = `<div style="flex:1;"></div>`;
+      rightColumnContent = `
+        <div style="text-align:right;direction:rtl;font-size:10pt;font-weight:700;color:${borderCol};line-height:1.8;flex:1;">
+          ${arL1}<br/>${arL2}<br/>${arL3}${fac ? `<br/>${fac}` : ''}${dept ? `<br/>${dept}` : ''}
+          <div style="margin-top:10pt;text-align:right;direction:ltr;font-size:9.5pt;font-family:'Arial','Calibri',sans-serif;">
+            ${enL1}<br/>${enL2}<br/>${enL3}
+          </div>
+        </div>
+      `;
+    }
+
     return `
 <div style="font-family:'Traditional Arabic','Amiri','Times New Roman',serif;direction:rtl;width:100%;height:100%;background:#ffffff;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative;display:flex;flex-direction:column;box-sizing:border-box;">
   <div style="${frameBorderOuter}"></div>
   <div style="${frameBorderInner}"></div>
   <div style="padding:24pt 24pt;display:flex;flex-direction:column;flex:1;justify-content:space-between;box-sizing:border-box;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0;direction:ltr;width:100%;">
-      <div style="text-align:left;direction:ltr;font-family:'Arial','Calibri',sans-serif;font-size:9.5pt;font-weight:700;color:${borderCol};line-height:1.8;flex:1;">
-        Kingdom of Saudi Arabia<br/>
-        Ministry of Education<br/>
-        ${uniEn || (uni ? uni : '')}
-      </div>
-      <div style="text-align:center;flex:0 0 auto;padding:0 12pt;">
-        ${logo ? `<img src="${logo}" style="max-height:60pt;max-width:90pt;display:block;margin:0 auto 5pt;" />` : `<div style="width:45pt;height:45pt;border-radius:50%;border:2pt solid ${borderCol};margin:0 auto 5pt;display:flex;align-items:center;justify-content:center;margin-left:auto;margin-right:auto;"><span style="color:${borderCol};font-size:16pt;">✦</span></div>`}
-        ${uni ? `<div style="color:#1a1a1a;font-size:9.5pt;font-weight:700;font-family:'Traditional Arabic',serif;line-height:1.3;">${uni}</div>` : ''}
-        ${uniEn ? `<div style="color:#1a1a1a;font-size:7.5pt;font-family:'Arial',sans-serif;direction:ltr;">${uniEn}</div>` : ''}
-      </div>
-      <div style="text-align:right;direction:rtl;font-size:10pt;font-weight:700;color:${borderCol};line-height:1.8;flex:1;">
-        المملكة العربية السعودية<br/>
-        وزارة التعليم<br/>
-        ${uni || ''}
-      </div>
+      ${leftColumnContent}
+      ${centerColumnContent}
+      ${rightColumnContent}
     </div>
     <div style="height:1pt;background:#cccccc;margin:10pt 0;flex-shrink:0;"></div>
     <div style="text-align:center;flex-shrink:0;margin-bottom:0;">
@@ -343,12 +454,17 @@ export function NewProject() {
     </div>
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:10pt 0;">
       ${subtitle ? `<div style="font-size:12pt;color:#333;font-weight:600;margin-bottom:10pt;">${subtitle}</div>` : ''}
+      ${cName ? `<div style="font-size:11pt;color:#555;margin-bottom:8pt;"><strong style="color:#111;">المقرر:</strong> ${cName}</div>` : ''}
+      ${trainAgency ? `<div style="font-size:11pt;color:#555;margin-bottom:8pt;"><strong style="color:#111;">جهة التدريب:</strong> ${trainAgency}</div>` : ''}
       ${deg ? `<div style="display:inline-block;background:${borderCol};color:#fff;font-size:10pt;padding:4pt 24pt;border-radius:3pt;margin-top:6pt;margin-left:auto;margin-right:auto;">${deg}</div>` : ''}
     </div>
-    <div style="flex-shrink:0;text-align:center;padding-top:12pt;border-top:0.5pt solid #cccccc;">
+    <div style="flex-shrink:0;text-align:${alignClass};padding-top:12pt;border-top:0.5pt solid #cccccc;">
       <div style="font-size:11.5pt;line-height:2.0;color:#1a1a1a;">
         ${student ? `<div><strong style="color:#1a1a1a;">إعداد الطالب: </strong>${student}</div>` : ''}
+        ${sId ? `<div><strong style="color:#1a1a1a;">الرقم الجامعي: </strong>${sId}</div>` : ''}
+        ${sect ? `<div><strong style="color:#1a1a1a;">الشعبة: </strong>${sect}</div>` : ''}
         ${supervisor ? `<div><strong style="color:#1a1a1a;">إشراف الدكتور: </strong>${supervisor}</div>` : ''}
+        ${fieldSup ? `<div><strong style="color:#1a1a1a;">المشرف الميداني: </strong>${fieldSup}</div>` : ''}
         ${year ? `<div style="font-size:11pt;color:#444;">${year}</div>` : ''}
       </div>
     </div>
@@ -389,7 +505,20 @@ export function NewProject() {
       degree,
       academicYear,
       finalLogoUrl,
-      borderColor
+      borderColor,
+      studentId,
+      section,
+      fieldSupervisor,
+      trainingAgency,
+      courseName,
+      detailsAlign,
+      headerLayout,
+      arabicHeader1,
+      arabicHeader2,
+      arabicHeader3,
+      englishHeader1,
+      englishHeader2,
+      englishHeader3
     );
     setLiveCoverHtml(html);
   }, [
@@ -405,10 +534,23 @@ export function NewProject() {
     department,
     degree,
     academicYear,
+    studentId,
+    section,
+    fieldSupervisor,
+    trainingAgency,
+    courseName,
     logoPreset,
     logoUrl,
     borderColor,
-    coversData
+    coversData,
+    detailsAlign,
+    headerLayout,
+    arabicHeader1,
+    arabicHeader2,
+    arabicHeader3,
+    englishHeader1,
+    englishHeader2,
+    englishHeader3
   ]);
 
   const togglePart = (partId: string) => {
@@ -453,214 +595,9 @@ export function NewProject() {
       finalLogoUrl = logoUrl;
     }
 
-    // Helper for cover HTML generation
-    const logoHtmlStr = finalLogoUrl
-      ? `<p style="text-align:center;margin-bottom:12pt;"><img src="${finalLogoUrl}" style="max-height:90px;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.18));" /></p>`
-      : "";
-
-    // Border frame helper (for classic style cover)
-    const frameBorderOuter = `position:absolute;top:8pt;right:8pt;bottom:8pt;left:8pt;border:3pt solid ${borderColor};pointer-events:none;z-index:10;`;
-    const frameBorderInner = `position:absolute;top:14pt;right:14pt;bottom:14pt;left:14pt;border:1pt solid ${borderColor};pointer-events:none;z-index:10;`;
-
     let coverPageHtml = "";
     if (includeCover) {
-      if (coverStyle.startsWith("template_")) {
-        coverPageHtml = liveCoverHtml;
-      } else if (coverStyle === "modern") {
-        // ═══════════════════════════════════════════════════
-        // LEGENDARY MODERN: Deep Royal Blue + Gold Gradient
-        // ═══════════════════════════════════════════════════
-        coverPageHtml = `
-<div style="font-family:'Cairo','Segoe UI','Arial',sans-serif;direction:rtl;width:100%;height:25.0cm;display:flex;flex-direction:column;overflow:hidden;background:linear-gradient(160deg,#0a1628 0%,#0d2347 40%,#1a3a6b 70%,#0f2a50 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative;">
-
-  <!-- Geometric SVG Background Pattern -->
-  <svg style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0.06;pointer-events:none;" xmlns="http://www.w3.org/2000/svg">
-    <defs><pattern id="hex" x="0" y="0" width="60" height="52" patternUnits="userSpaceOnUse"><polygon points="30,2 58,17 58,47 30,62 2,47 2,17" fill="none" stroke="#C9A84C" stroke-width="1"/></pattern></defs>
-    <rect width="100%" height="100%" fill="url(#hex)"/>
-  </svg>
-
-  <!-- Top Gold Bar -->
-  <div style="background:linear-gradient(90deg,#C9A84C,#F0D070,#C9A84C);height:5pt;width:100%;flex-shrink:0;position:relative;z-index:1;"></div>
-
-  <!-- Top Section: University Header -->
-  <div style="position:relative;z-index:1;padding:32pt 36pt 20pt 36pt;flex-shrink:0;text-align:center;">
-    ${finalLogoUrl ? `<img src="${finalLogoUrl}" style="max-height:70pt;margin-bottom:10pt;filter:drop-shadow(0 2px 10px rgba(201,168,76,0.4));" />` : `<div style="width:55pt;height:55pt;border-radius:50%;border:2pt solid #C9A84C;margin:0 auto 10pt;line-height:55pt;text-align:center;"><span style="color:#C9A84C;font-size:20pt;">◆</span></div>`}
-    ${university ? `<div style="color:#F0D070;font-size:13pt;font-weight:700;letter-spacing:0.5px;margin-bottom:4pt;">${university}</div>` : ""}
-    ${faculty ? `<div style="color:#B8C8E8;font-size:10.5pt;margin-bottom:2pt;">${faculty}</div>` : ""}
-    ${department ? `<div style="color:#8A9FBF;font-size:10pt;">${department}</div>` : ""}
-  </div>
-
-  <!-- Gold Divider -->
-  <div style="position:relative;z-index:1;margin:0 36pt;height:1pt;background:linear-gradient(90deg,transparent,#C9A84C,#F0D070,#C9A84C,transparent);flex-shrink:0;"></div>
-
-  <!-- Center: Title Block — flex:1 pushes bottom panel down -->
-  <div style="position:relative;z-index:1;padding:36pt 40pt 30pt;text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center;">
-    <!-- Badge -->
-    <div style="display:inline-block;background:rgba(201,168,76,0.15);border:1.5pt solid #C9A84C;border-radius:20pt;padding:5pt 20pt;margin-bottom:24pt;">
-      <span style="color:#F0D070;font-size:10pt;font-weight:700;letter-spacing:1px;">${degree || "بحث علمي"}</span>
-    </div>
-
-    <!-- Main Title -->
-    <div style="background:rgba(255,255,255,0.04);border:1pt solid rgba(201,168,76,0.25);border-radius:8pt;padding:26pt 22pt;margin-bottom:0;">
-      <h1 style="color:#FFFFFF;font-size:${Math.min(26, Math.max(17, Math.round(380 / Math.max(values.title.length, 10))))}pt;font-weight:800;line-height:1.5;margin:0 0 12pt;text-shadow:0 2px 8px rgba(0,0,0,0.4);">${values.title}</h1>
-      <div style="width:100pt;height:2.5pt;background:linear-gradient(90deg,transparent,#C9A84C,#F0D070,#C9A84C,transparent);margin:0 auto;"></div>
-      ${coverSubtitle ? `<p style="color:#B8C8E8;font-size:12pt;font-style:italic;margin:14pt 0 0;">${coverSubtitle}</p>` : ""}
-    </div>
-  </div>
-
-  <!-- Bottom Info Panel — naturally at the bottom thanks to flex column -->
-  <div style="position:relative;z-index:1;background:rgba(0,0,0,0.4);border-top:1pt solid rgba(201,168,76,0.3);padding:16pt 40pt;flex-shrink:0;">
-    <div style="height:2pt;background:linear-gradient(90deg,transparent,#C9A84C,#F0D070,#C9A84C,transparent);margin-bottom:14pt;"></div>
-    <table style="width:100%;border:none;border-collapse:collapse;">
-      <tr>
-        ${studentName ? `<td style="color:#E8EEF8;font-size:11pt;padding:3pt 8pt;border:none;text-align:right;"><span style="color:#C9A84C;font-weight:700;">إعداد الطالب: </span>${studentName}</td>` : "<td style='border:none;'></td>"}
-        ${supervisorName ? `<td style="color:#E8EEF8;font-size:11pt;padding:3pt 8pt;border:none;text-align:right;"><span style="color:#C9A84C;font-weight:700;">إشراف: </span>${supervisorName}</td>` : "<td style='border:none;'></td>"}
-      </tr>
-      <tr>
-        <td colspan="2" style="border:none;padding:6pt 8pt 0;">
-          <div style="height:1pt;background:rgba(201,168,76,0.2);margin-bottom:6pt;"></div>
-          <div style="text-align:center;color:#8A9FBF;font-size:10pt;">${academicYear || ""}</div>
-        </td>
-      </tr>
-    </table>
-  </div>
-</div>
-        `;
-      } else if (coverStyle === "framed") {
-        // ═══════════════════════════════════════════════════
-        // LEGENDARY FRAMED: Emerald Forest + Cream Luxury
-        // ═══════════════════════════════════════════════════
-        coverPageHtml = `
-<div style="font-family:'Traditional Arabic','Amiri','Times New Roman',serif;direction:rtl;width:100%;height:25.0cm;background:#F8F4EE;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative;overflow:hidden;box-sizing:border-box;">
-
-  <!-- Corner Ornaments SVG -->
-  <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;" xmlns="http://www.w3.org/2000/svg">
-    <!-- Top-right corner -->
-    <path d="M 530 15 L 560 15 L 560 8 L 568 8 L 568 45 L 560 45 L 560 22 L 530 22 Z" fill="#1B5E3B" opacity="0.8"/>
-    <path d="M 545 8 L 545 45" stroke="#C9A84C" stroke-width="1" opacity="0.6"/>
-    <!-- Top-left corner -->
-    <path d="M 30 15 L 60 15 L 60 22 L 30 22 L 30 45 L 22 45 L 22 8 L 30 8 Z" fill="#1B5E3B" opacity="0.8"/>
-    <path d="M 15 8 L 15 45" stroke="#C9A84C" stroke-width="1" opacity="0.6"/>
-    <!-- Bottom-right corner -->
-    <path d="M 530 1105 L 560 1105 L 560 1112 L 568 1112 L 568 1075 L 560 1075 L 560 1098 L 530 1098 Z" fill="#1B5E3B" opacity="0.8"/>
-    <!-- Bottom-left corner -->
-    <path d="M 30 1105 L 60 1105 L 60 1098 L 30 1098 L 30 1075 L 22 1075 L 22 1112 L 30 1112 Z" fill="#1B5E3B" opacity="0.8"/>
-  </svg>
-
-  <!-- Outer Border -->
-  <div style="position:absolute;top:12pt;right:12pt;bottom:12pt;left:12pt;border:3pt solid #1B5E3B;"></div>
-  <!-- Inner Border -->
-  <div style="position:absolute;top:18pt;right:18pt;bottom:18pt;left:18pt;border:1pt solid #C9A84C;"></div>
-
-  <!-- Content -->
-  <div style="padding:35pt;position:relative;">
-
-    <!-- Top Header Strip -->
-    <div style="background:linear-gradient(135deg,#1B5E3B,#2E7D52);border-radius:4pt;padding:14pt 20pt;margin-bottom:20pt;text-align:center;">
-      ${finalLogoUrl ? `<img src="${finalLogoUrl}" style="max-height:55pt;margin-bottom:8pt;filter:brightness(1.1);" /><br/>` : ""}
-      ${university ? `<div style="color:#F0E6C8;font-size:13pt;font-weight:700;margin-bottom:3pt;">${university}</div>` : ""}
-      ${faculty ? `<div style="color:#B8D4C0;font-size:10.5pt;margin-bottom:2pt;">${faculty}</div>` : ""}
-      ${department ? `<div style="color:#90B89A;font-size:10pt;">${department}</div>` : ""}
-    </div>
-
-    <!-- Ornamental Divider -->
-    <div style="text-align:center;margin:12pt 0;color:#C9A84C;font-size:14pt;letter-spacing:8px;">✦ ✦ ✦</div>
-
-    <!-- Title Area -->
-    <div style="text-align:center;padding:20pt 16pt;border:1.5pt solid #1B5E3B;border-radius:4pt;background:linear-gradient(180deg,rgba(27,94,59,0.04),rgba(27,94,59,0.02));margin:10pt 0 20pt;">
-      ${degree ? `<div style="display:inline-block;background:#1B5E3B;color:#F0E6C8;font-size:10pt;padding:3pt 16pt;border-radius:2pt;margin-bottom:16pt;">${degree}</div>` : ""}
-      <h1 style="color:#0D3320;font-size:22pt;font-weight:800;line-height:1.6;margin:0 0 10pt;">${values.title}</h1>
-      <div style="margin:10pt auto;width:120pt;height:0;border-top:2pt solid #C9A84C;"></div>
-      ${coverSubtitle ? `<p style="color:#2E7D52;font-size:12pt;font-style:italic;margin:10pt 0 0;">${coverSubtitle}</p>` : ""}
-    </div>
-
-    <!-- Ornamental Divider -->
-    <div style="text-align:center;margin:12pt 0;color:#C9A84C;font-size:14pt;letter-spacing:8px;">◆ ◆ ◆</div>
-
-    <!-- Metadata Grid -->
-    <div style="background:linear-gradient(180deg,rgba(27,94,59,0.06),rgba(201,168,76,0.06));border:1pt solid rgba(27,94,59,0.2);border-radius:4pt;padding:16pt 20pt;margin-top:10pt;">
-      <table style="width:100%;border-collapse:collapse;">
-        <tr>
-          ${studentName ? `<td style="padding:6pt 8pt;border:none;text-align:right;font-size:11.5pt;color:#1B5E3B;"><strong style="color:#0D3320;">إعداد الطالب:</strong> ${studentName}</td>` : "<td style='border:none;'></td>"}
-          ${supervisorName ? `<td style="padding:6pt 8pt;border:none;text-align:right;font-size:11.5pt;color:#1B5E3B;"><strong style="color:#0D3320;">إشراف الدكتور:</strong> ${supervisorName}</td>` : "<td style='border:none;'></td>"}
-        </tr>
-        <tr><td colspan="2" style="border:none;padding:4pt 8pt;"><div style="height:1pt;background:rgba(27,94,59,0.2);"></div></td></tr>
-        <tr>
-          <td style="padding:6pt 8pt;border:none;text-align:center;font-size:10.5pt;color:#555;" colspan="2">${academicYear || ""}</td>
-        </tr>
-      </table>
-    </div>
-  </div>
-</div>
-        `;
-      } else {
-        // ═══════════════════════════════════════════════════
-        // ACADEMIC REFERENCE STYLE: Exact match to reference document
-        // White bg, double border frame, 3-col bilingual header
-        // ═══════════════════════════════════════════════════
-        coverPageHtml = `
-<div style="font-family:'Traditional Arabic','Amiri','Times New Roman',serif;direction:rtl;width:100%;height:100%;background:#ffffff;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative;display:flex;flex-direction:column;box-sizing:border-box;">
-
-  <div style="padding:12pt 14pt;display:flex;flex-direction:column;flex:1;">
-
-    <!-- ═══ TOP HEADER: 3-column bilingual (EXACT reference match) ═══ -->
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0;direction:ltr;width:100%;">
-
-      <!-- LEFT: English institution info (LTR direction) -->
-      <div style="text-align:left;direction:ltr;font-family:'Arial','Calibri',sans-serif;font-size:9.5pt;font-weight:700;color:${borderColor};line-height:2.0;flex:1;">
-        Kingdom of Saudi Arabia<br/>
-        Ministry of Education<br/>
-        ${universityEn || (university ? university : '')}
-      </div>
-
-      <!-- CENTER: Logo image + university Arabic name below it -->
-      <div style="text-align:center;flex:0 0 auto;padding:0 12pt;">
-        ${finalLogoUrl
-          ? `<img src="${finalLogoUrl}" style="max-height:68pt;max-width:100pt;display:block;margin:0 auto 5pt;" />`
-          : `<div style="width:55pt;height:55pt;border-radius:50%;border:2pt solid ${borderColor};margin:0 auto 5pt;display:flex;align-items:center;justify-content:center;"><span style="color:${borderColor};font-size:18pt;">✦</span></div>`}
-        ${university ? `<div style="color:#1a1a1a;font-size:9.5pt;font-weight:700;font-family:'Traditional Arabic',serif;line-height:1.4;">${university}</div>` : ''}
-        ${universityEn ? `<div style="color:#1a1a1a;font-size:7.5pt;font-family:'Arial',sans-serif;direction:ltr;">${universityEn}</div>` : ''}
-      </div>
-
-      <!-- RIGHT: Arabic institution info -->
-      <div style="text-align:right;direction:rtl;font-size:10pt;font-weight:700;color:${borderColor};line-height:2.0;flex:1;">
-        المملكة العربية السعودية<br/>
-        وزارة التعليم<br/>
-        ${university || ''}
-      </div>
-    </div>
-
-    <!-- Thin separator under header -->
-    <div style="height:1pt;background:#cccccc;margin:12pt 0;flex-shrink:0;"></div>
-
-    <!-- ═══ TITLE area (upper center after header) ═══ -->
-    <div style="text-align:center;flex-shrink:0;margin-bottom:0;">
-      ${faculty ? `<div style="font-size:11pt;color:#333;margin-bottom:4pt;">${faculty}</div>` : ''}
-      ${department ? `<div style="font-size:10pt;color:#555;margin-bottom:8pt;">${department}</div>` : ''}
-      <h1 style="font-size:${Math.min(26, Math.max(18, Math.round(360 / Math.max(values.title.length, 8))))}pt;font-weight:800;color:#1a1a1a;line-height:1.6;margin:10pt auto 10pt;max-width:400pt;">${values.title}</h1>
-      <!-- Thick horizontal black rule (exact reference match) -->
-      <div style="width:220pt;height:3.5pt;background:#1a1a1a;margin:0 auto 16pt;"></div>
-    </div>
-
-    <!-- ═══ CENTER SPACE: project image / subtitle ═══ -->
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:10pt 0;">
-      ${coverSubtitle ? `<div style="font-size:13pt;color:#333;font-weight:600;margin-bottom:12pt;">${coverSubtitle}</div>` : ''}
-      ${degree ? `<div style="display:inline-block;background:${borderColor};color:#fff;font-size:10.5pt;padding:5pt 28pt;border-radius:3pt;margin-top:8pt;">${degree}</div>` : ''}
-    </div>
-
-    <!-- ═══ BOTTOM: Student info (centered, exact reference style) ═══ -->
-    <div style="flex-shrink:0;text-align:center;padding-top:14pt;border-top:0.5pt solid #cccccc;">
-      <div style="font-size:12pt;line-height:2.2;color:#1a1a1a;">
-        ${studentName ? `<div><strong style="color:#1a1a1a;">إعداد الطالب: </strong>${studentName}</div>` : ''}
-        ${supervisorName ? `<div><strong style="color:#1a1a1a;">إشراف الدكتور: </strong>${supervisorName}</div>` : ''}
-        ${academicYear ? `<div style="font-size:11pt;color:#444;">${academicYear}</div>` : ''}
-      </div>
-    </div>
-
-  </div>
-</div>
-        `;
-      }
+      coverPageHtml = liveCoverHtml;
     }
 
 
@@ -668,6 +605,7 @@ export function NewProject() {
       showPageNumbers,
       pageNumberFormat,
       pageNumberAlign,
+      targetPageCount,
       pageSetup: {
         size: pageSize,
         orientation,
@@ -679,6 +617,14 @@ export function NewProject() {
       coverPageHtml: includeCover ? coverPageHtml : undefined,
       borderColor,
       showPageBorder,
+      detailsAlign,
+      headerLayout,
+      arabicHeader1,
+      arabicHeader2,
+      arabicHeader3,
+      englishHeader1,
+      englishHeader2,
+      englishHeader3,
       cover: includeCover ? {
         title: values.title,
         subtitle: coverSubtitle,
@@ -691,6 +637,11 @@ export function NewProject() {
         degree,
         year: academicYear,
         logoUrl: finalLogoUrl,
+        studentId,
+        section,
+        fieldSupervisor,
+        trainingAgency,
+        courseName,
       } : undefined,
       isCustomTemplateCover: coverStyle.startsWith("template_"),
       coverTemplateId: coverStyle.startsWith("template_") ? parseInt(coverStyle.replace("template_", ""), 10) : undefined,
@@ -909,6 +860,24 @@ export function NewProject() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Target Page Count Select (AI Expansion parameter) */}
+            <div className="space-y-1.5 pt-2">
+              <Label htmlFor="targetPageCount">عدد الصفحات المستهدف (للذكاء الاصطناعي)</Label>
+              <Select value={targetPageCount} onValueChange={setTargetPageCount}>
+                <SelectTrigger id="targetPageCount" className="w-full md:w-72">
+                  <SelectValue placeholder="اختر حجم المحتوى" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unlimited">توليد تلقائي (حسب متطلبات الواجب)</SelectItem>
+                  <SelectItem value="3-5">قصير (3 - 5 صفحات)</SelectItem>
+                  <SelectItem value="5-10">متوسط (5 - 10 صفحات)</SelectItem>
+                  <SelectItem value="10-15">طويل (10 - 15 صفحة)</SelectItem>
+                  <SelectItem value="15-20">مفصل جداً (15 - 20 صفحة)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">سيقوم الذكاء الاصطناعي بالتوسع في شرح وتفصيل النقاط والمفاهيم لتلبية حجم البحث المستهدف.</p>
             </div>
           </CardContent>
         </Card>
@@ -1465,6 +1434,16 @@ export function NewProject() {
                           />
                         </div>
 
+                        {/* Student ID */}
+                        <div className="space-y-1.5">
+                          <Label>الرقم الجامعي (اختياري)</Label>
+                          <Input
+                            placeholder="مثلاً: 44102938..."
+                            value={studentId}
+                            onChange={(e) => setStudentId(e.target.value)}
+                          />
+                        </div>
+
                         {/* Supervisor Name */}
                         <div className="space-y-1.5">
                           <Label>اسم المشرف الأكاديمي</Label>
@@ -1472,6 +1451,16 @@ export function NewProject() {
                             placeholder="د. / أ.د. ..."
                             value={supervisorName}
                             onChange={(e) => setSupervisorName(e.target.value)}
+                          />
+                        </div>
+
+                        {/* Field Supervisor */}
+                        <div className="space-y-1.5">
+                          <Label>المشرف الميداني (اختياري)</Label>
+                          <Input
+                            placeholder="اسم المشرف في جهة التدريب..."
+                            value={fieldSupervisor}
+                            onChange={(e) => setFieldSupervisor(e.target.value)}
                           />
                         </div>
 
@@ -1521,6 +1510,16 @@ export function NewProject() {
                           </Select>
                         </div>
 
+                        {/* Section */}
+                        <div className="space-y-1.5">
+                          <Label>الشعبة / المجموعة (اختياري)</Label>
+                          <Input
+                            placeholder="مثلاً: 101 أو A..."
+                            value={section}
+                            onChange={(e) => setSection(e.target.value)}
+                          />
+                        </div>
+
                         {/* Academic Year */}
                         <div className="space-y-1.5">
                           <Label>العام الجامعي / الدراسي</Label>
@@ -1539,6 +1538,119 @@ export function NewProject() {
                             value={universityEn}
                             onChange={(e) => setUniversityEn(e.target.value)}
                           />
+                        </div>
+
+                        {/* Course Name */}
+                        <div className="space-y-1.5">
+                          <Label>اسم المقرر / المادة (اختياري)</Label>
+                          <Input
+                            placeholder="مثلاً: التدريب التعاوني..."
+                            value={courseName}
+                            onChange={(e) => setCourseName(e.target.value)}
+                          />
+                        </div>
+
+                        {/* Training Agency */}
+                        <div className="space-y-1.5">
+                          <Label>جهة التدريب / العمل (اختياري)</Label>
+                          <Input
+                            placeholder="مثلاً: أمانة منطقة الحدود الشمالية..."
+                            value={trainingAgency}
+                            onChange={(e) => setTrainingAgency(e.target.value)}
+                          />
+                        </div>
+
+                        {/* Header Layout & Details Alignment Controls */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4 mt-2">
+                          <div className="space-y-1.5">
+                            <Label>تنسيق وترتيب الهيدر (أعلى الغلاف)</Label>
+                            <Select value={headerLayout} onValueChange={(val: any) => setHeaderLayout(val)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="اختر ترتيب الهيدر" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="logo-center">اللوجو بالمنتصف، والترويسات يمين ويسار</SelectItem>
+                                <SelectItem value="logo-right">اللوجو باليمين، والترويسة مدمجة باليسار</SelectItem>
+                                <SelectItem value="logo-left">اللوجو باليسار، والترويسة مدمجة باليمين</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label>محاذاة بيانات الطالب والمشرف (أسفل الغلاف)</Label>
+                            <Select value={detailsAlign} onValueChange={(val: any) => setDetailsAlign(val)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="اختر محاذاة البيانات" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="right">محاذاة إلى اليمين</SelectItem>
+                                <SelectItem value="center">توسيط البيانات (بالمنتصف)</SelectItem>
+                                <SelectItem value="left">محاذاة إلى اليسار</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* Custom Arabic Header Lines */}
+                        <div className="space-y-2 border-t pt-3">
+                          <Label className="text-emerald-700 font-bold block mb-1">التحكم في نص الترويسة العربية (اليمين)</Label>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                            <div className="space-y-1">
+                              <span className="text-xs text-muted-foreground">السطر الأول</span>
+                              <Input
+                                placeholder="المملكة العربية السعودية"
+                                value={arabicHeader1}
+                                onChange={(e) => setArabicHeader1(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-xs text-muted-foreground">السطر الثاني</span>
+                              <Input
+                                placeholder="وزارة التعليم"
+                                value={arabicHeader2}
+                                onChange={(e) => setArabicHeader2(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-xs text-muted-foreground">السطر الثالث (الجامعة)</span>
+                              <Input
+                                placeholder="اسم الجامعة بالعربي"
+                                value={arabicHeader3}
+                                onChange={(e) => setArabicHeader3(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Custom English Header Lines */}
+                        <div className="space-y-2 border-t pt-3 pb-3 border-b mb-3">
+                          <Label className="text-indigo-700 font-bold block mb-1">التحكم في نص الترويسة الإنجليزية (اليسار)</Label>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                            <div className="space-y-1">
+                              <span className="text-xs text-muted-foreground">Line 1</span>
+                              <Input
+                                placeholder="Kingdom of Saudi Arabia"
+                                value={englishHeader1}
+                                onChange={(e) => setEnglishHeader1(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-xs text-muted-foreground">Line 2</span>
+                              <Input
+                                placeholder="Ministry of Education"
+                                value={englishHeader2}
+                                onChange={(e) => setEnglishHeader2(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-xs text-muted-foreground">Line 3 (University)</span>
+                              <Input
+                                placeholder="University Name"
+                                value={englishHeader3}
+                                onChange={(e) => setEnglishHeader3(e.target.value)}
+                              />
+                            </div>
+                          </div>
                         </div>
 
                         {/* Page Border Color Picker */}
@@ -1586,7 +1698,7 @@ export function NewProject() {
                               <div className="w-[84mm] h-[120mm] overflow-hidden border shadow-lg rounded bg-white relative">
                                 <div className="w-[210mm] h-[297mm] origin-top-left scale-[0.4] absolute top-0 left-0">
                                   <iframe
-                                    srcDoc={`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/><style>html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: white; }</style></head><body>${liveCoverHtml}</body></html>`}
+                                    srcDoc={`<!DOCTYPE html><html lang="ar" dir="rtl" spellcheck="false"><head><meta charset="utf-8"/><style>html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: white; }</style></head><body spellcheck="false">${liveCoverHtml}</body></html>`}
                                     className="w-full h-full border-0"
                                     title="Cover Live Preview"
                                   />

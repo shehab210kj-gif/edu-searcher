@@ -81,6 +81,11 @@ export function LibraryPreview() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc, location]);
 
+  const queryParams = new URLSearchParams(window.location.search);
+  const backTo = queryParams.get("back") || "library";
+  const backUrl = backTo === "templates" ? "/templates" : "/library";
+  const backLabel = backTo === "templates" ? "قوالب النظام" : "المكتبة البحثية";
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -95,8 +100,8 @@ export function LibraryPreview() {
       <div className="text-center py-20 space-y-4">
         <FileText className="w-12 h-12 text-muted-foreground/40 mx-auto" />
         <h2 className="text-xl font-bold">المستند غير موجود</h2>
-        <Link href="/library">
-          <Button variant="outline">العودة إلى المكتبة</Button>
+        <Link href={backUrl}>
+          <Button variant="outline">العودة إلى {backLabel}</Button>
         </Link>
       </div>
     );
@@ -110,11 +115,11 @@ export function LibraryPreview() {
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
         <div className="space-y-2 min-w-0">
           <Link
-            href="/library"
+            href={backUrl}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
           >
             <ArrowRight className="w-4 h-4" />
-            المكتبة البحثية
+            {backLabel}
           </Link>
           <h1 className="text-2xl font-bold">{doc.title}</h1>
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">

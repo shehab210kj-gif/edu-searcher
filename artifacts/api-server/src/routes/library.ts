@@ -160,6 +160,79 @@ router.get("/library/categories", async (_req, res): Promise<void> => {
   res.json(rows.map(serializeLibraryCategory));
 });
 
+router.post("/library/categories", async (req, res): Promise<void> => {
+  const { name, kind, parentId } = req.body;
+  if (!name || !kind) {
+    res.status(400).json({ error: "الاسم ونوع التصنيف مطلوبان" });
+    return;
+  }
+  try {
+    const [inserted] = await db
+      .insert(libraryCategoriesTable)
+      .values({
+        name,
+        kind,
+        parentId: parentId ? parseInt(parentId, 10) : null,
+      })
+      .returning();
+    res.status(201).json(serializeLibraryCategory(inserted));
+  } catch (err) {
+    res.status(500).json({ error: "فشل إنشاء التصنيف" });
+  }
+});
+
+router.patch("/library/categories/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "معرف غير صحيح" });
+    return;
+  }
+  const { name, parentId } = req.body;
+  try {
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (parentId !== undefined) updateData.parentId = parentId ? parseInt(parentId, 10) : null;
+
+    const [updated] = await db
+      .update(libraryCategoriesTable)
+      .set(updateData)
+      .where(eq(libraryCategoriesTable.id, id))
+      .returning();
+    if (!updated) {
+      res.status(404).json({ error: "التصنيف غير موجود" });
+      return;
+    }
+    res.json(serializeLibraryCategory(updated));
+  } catch (err) {
+    res.status(500).json({ error: "فشل تعديل التصنيف" });
+  }
+});
+
+router.delete("/library/categories/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "معرف غير صحيح" });
+    return;
+  }
+  try {
+    const [deleted] = await db
+      .delete(libraryCategoriesTable)
+      .where(eq(libraryCategoriesTable.id, id))
+      .returning();
+    if (!deleted) {
+      res.status(404).json({ error: "التصنيف غير موجود" });
+      return;
+    }
+    await db
+      .delete(libraryCategoriesTable)
+      .where(eq(libraryCategoriesTable.parentId, id));
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "فشل حذف التصنيف" });
+  }
+});
+
 router.get("/library/:id", async (req, res): Promise<void> => {
   const params = GetLibraryDocumentParams.safeParse(req.params);
   if (!params.success) {
@@ -475,6 +548,35 @@ router.post(
         const meta = await extractPdfMetadata(req.file.buffer);
         pageCount = meta.pageCount;
         extractedTitle = meta.title;
+        let pdfText = "";
+        try {
+          pdfText = await parseDocument(req.file.buffer, req.file.originalname, PDF_MIME);
+        } catch (err) {
+          req.log.warn({ err }, "Failed to extract text from PDF");
+        }
+        if (pdfText.trim().length < 100 && gemini) {
+          req.log.info("PDF upload has very little digital text; performing Gemini OCR");
+          try {
+            const aiRes = await gemini.models.generateContent({
+              model: GEMINI_MODEL,
+              contents: [
+                {
+                  inlineData: {
+                    data: req.file.buffer.toString("base64"),
+                    mimeType: "application/pdf",
+                  },
+                },
+                "قم بقراءة واستخراج كل النصوص المكتوبة في هذا الملف الـ PDF بالتفصيل والكامل باللغة العربية."
+              ]
+            });
+            pdfText = aiRes.text ?? pdfText;
+          } catch (ocrErr) {
+            req.log.warn({ ocrErr }, "Gemini OCR failed during PDF upload");
+          }
+        }
+        if (pdfText) {
+          richContent = pdfText.split(/\n+/).map(p => `<p>${p.trim()}</p>`).join("");
+        }
       } else if (isDocx) {
         try {
           const parsed = await parseDocxToRich(req.file.buffer);
@@ -565,10 +667,30 @@ router.post(
         extractedText = aiRes.text ?? "";
       } else {
         extractedText = await parseDocument(req.file.buffer, req.file.originalname, req.file.mimetype);
+        if (req.file.mimetype === "application/pdf" && extractedText.trim().length < 100 && gemini) {
+          req.log.info("PDF has very little digital text; falling back to multimodal Gemini OCR for scanned PDF");
+          try {
+            const aiRes = await gemini.models.generateContent({
+              model: GEMINI_MODEL,
+              contents: [
+                {
+                  inlineData: {
+                    data: req.file.buffer.toString("base64"),
+                    mimeType: "application/pdf",
+                  },
+                },
+                "قم بقراءة واستخراج كل النصوص والتعليمات والتكليفات من هذا المستند الـ PDF بالتفصيل والكامل باللغة العربية."
+              ]
+            });
+            extractedText = aiRes.text ?? extractedText;
+          } catch (ocrErr) {
+            req.log.warn({ ocrErr }, "Gemini OCR failed during PDF match");
+          }
+        }
       }
 
       if (!extractedText.trim()) {
-        res.status(400).json({ error: "لم يتم العثور على أي نص مقروء في الملف المرفوع" });
+        res.status(400).json({ error: "لم يتم العثور على أي نص مقروء في الملف المرفوع. يبدو أن الملف عبارة عن صورة سكانر غير مقروءة، يرجى كتابة المتطلبات يدوياً أو رفع ملف نصي." });
         return;
       }
 
@@ -579,14 +701,22 @@ router.post(
         return;
       }
 
-      const docList = allDocs.map((d) => ({
-        id: d.id,
-        title: d.title,
-        description: d.description,
-        university: d.university,
-        department: d.department,
-        category: d.category,
-      }));
+      const docList = allDocs.map((d) => {
+        const cleanSnippet = d.richContent
+          .replace(/<[^>]*>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 800);
+        return {
+          id: d.id,
+          title: d.title,
+          description: d.description,
+          university: d.university,
+          department: d.department,
+          category: d.category,
+          snippet: cleanSnippet,
+        };
+      });
 
       const systemPrompt = `أنت خبير أكاديمي ذكي ومساعد باحث. مهمتك هي قراءة متطلبات التكليف/البحث الدراسي ومقارنتها بقائمة الأبحاث السابقة المنجزة في قاعدة البيانات لتحديد نسبة التطابق والتشابه ومدى ملاءمة إعادة استخدام أي منها وتعديله.`;
       const userPrompt = `

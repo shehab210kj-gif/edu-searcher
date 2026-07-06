@@ -82,6 +82,7 @@ export const libraryCategoriesTable = pgTable("library_categories", {
   id: serial("id").primaryKey(),
   kind: text("kind").notNull().default("category"),
   name: text("name").notNull(),
+  parentId: integer("parent_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
