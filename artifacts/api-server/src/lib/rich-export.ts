@@ -524,7 +524,7 @@ async function renderPdf(project: RichExportInput): Promise<Buffer> {
   }
 
   .cover {
-    height: 22.0cm;
+    height: ${ps?.orientation === "landscape" ? "14.5cm" : "22.0cm"};
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -683,8 +683,14 @@ ${content}
     );
 
     const isLetter = ps?.size === "Letter";
-    const pageWidth = isLetter ? 21.59 : 21.0;
-    const pageHeight = isLetter ? 27.94 : 29.7;
+    let pageWidth = isLetter ? 21.59 : 21.0;
+    let pageHeight = isLetter ? 27.94 : 29.7;
+
+    if (ps?.orientation === "landscape") {
+      const temp = pageWidth;
+      pageWidth = pageHeight;
+      pageHeight = temp;
+    }
 
     const borderHtml = showPageBorder
       ? `<div style="position: absolute; top: 0.4cm; left: 0.4cm; width: ${pageWidth - 0.8}cm; height: ${pageHeight - 0.8}cm; border: 3pt solid ${borderColor}; box-sizing: border-box; pointer-events: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; z-index: 9999;"></div>

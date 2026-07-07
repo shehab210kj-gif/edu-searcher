@@ -144,31 +144,68 @@ export function Templates() {
                       loading="lazy"
                     />
                   ) : (
-                    <div className="w-full h-full flex flex-col bg-white p-3 border-b relative select-none">
-                      {/* Miniature Page Decoration */}
-                      <div className="border border-slate-200 w-full h-full p-3 rounded-sm flex flex-col gap-1.5 relative bg-[#fafafa] shadow-inner overflow-hidden text-right">
-                        <div className="text-[10px] font-bold text-indigo-600 border-b border-indigo-200 pb-1 flex justify-between items-center">
-                          <span>{doc.university || "قالب جاهز"}</span>
-                          <span className="text-[8px] bg-indigo-50 text-indigo-600 px-1.5 rounded">{doc.department || "غلاف"}</span>
-                        </div>
-                        <div className="font-extrabold text-xs text-slate-800 line-clamp-3 leading-relaxed mt-1 text-center">
-                          {doc.title}
-                        </div>
-                        <div className="w-8 h-0.5 bg-amber-500 mx-auto my-0.5"></div>
-                        {doc.description ? (
-                          <div className="text-[9.5px] text-slate-500 line-clamp-5 leading-relaxed">
-                            {doc.description}
-                          </div>
-                        ) : (
-                          <div className="flex flex-col gap-1 mt-1">
-                            <div className="h-1.5 bg-slate-200 rounded w-5/6"></div>
-                            <div className="h-1.5 bg-slate-200 rounded w-full"></div>
-                            <div className="h-1.5 bg-slate-200 rounded w-4/5"></div>
-                            <div className="h-1.5 bg-slate-200 rounded w-full"></div>
-                          </div>
-                        )}
-                        {/* Fade out bottom overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[#fafafa] to-transparent pointer-events-none" />
+                    <div className="w-full h-full bg-slate-50 border-b relative overflow-hidden flex items-center justify-center select-none group-hover:bg-slate-100/50 transition-colors">
+                      <div 
+                        className="w-[210px] h-[297px] bg-white border border-slate-200 shadow-sm rounded-sm overflow-hidden relative shrink-0"
+                        style={{
+                          transform: "scale(0.55)",
+                          transformOrigin: "center center",
+                        }}
+                      >
+                        <iframe
+                          title={doc.title}
+                          srcDoc={`
+                            <!DOCTYPE html>
+                            <html dir="rtl">
+                              <head>
+                                <meta charset="utf-8">
+                                <style>
+                                  html, body {
+                                    margin: 0;
+                                    padding: 12px;
+                                    font-family: 'Cairo', 'Amiri', sans-serif;
+                                    background: white;
+                                    font-size: 5px;
+                                    color: #1e293b;
+                                    overflow: hidden;
+                                    height: 100%;
+                                    box-sizing: border-box;
+                                    line-height: 1.3;
+                                  }
+                                  body * {
+                                    font-size: inherit !important;
+                                  }
+                                  img {
+                                    max-height: 20px;
+                                    width: auto;
+                                    object-fit: contain;
+                                  }
+                                  /* Clean margins and layouts */
+                                  h1, h2, h3, p {
+                                    margin: 4px 0;
+                                    text-align: center;
+                                  }
+                                </style>
+                              </head>
+                              <body>
+                                ${ (doc as any).richContent
+                                  ? (doc as any).richContent
+                                      .replace(/\{title\}/g, doc.title || "عنوان التكليف الأكاديمي")
+                                      .replace(/\{subtitle\}/g, "دراسة تحليلية مقارنة")
+                                      .replace(/\{student\}/g, "اسم الطالب الباحث")
+                                      .replace(/\{supervisor\}/g, "أ.د. المشرف العلمي")
+                                      .replace(/\{university\}/g, doc.university || "الجامعة الأكاديمية")
+                                      .replace(/\{faculty\}/g, doc.department || "الكلية المعنية")
+                                      .replace(/\{department\}/g, "قسم الدراسات والبحوث")
+                                      .replace(/\{academicYear\}/g, "2026/2027")
+                                      .replace(/\{studentId\}/g, "44102938")
+                                  : `<div style="text-align:center;margin-top:50px;">قالب غلاف جاهز</div>`
+                                }
+                              </body>
+                            </html>
+                          `}
+                          className="w-full h-full border-none pointer-events-none"
+                        />
                       </div>
                     </div>
                   )}

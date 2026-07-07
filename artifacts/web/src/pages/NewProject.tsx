@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Loader2, UploadCloud, FileText, Wand2, Settings2, Type,
+  Loader2, UploadCloud, FileText, Wand2, Settings2, Type, ArrowRight,
   AlignRight, CheckSquare, Copy, BookOpen, Lightbulb, ChevronDown, ChevronUp,
   Layout, AlignCenter, AlignLeft, AlignJustify, GraduationCap, ListTodo, CheckCircle2, Eye
 } from "lucide-react";
@@ -111,7 +111,7 @@ export function NewProject() {
   });
 
   const [isUploading, setIsUploading] = useState(false);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [analysis, setAnalysis] = useState<{
     title?: string | null;
     university?: string | null;
@@ -750,42 +750,74 @@ export function NewProject() {
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    setFileName(file.name);
     setIsUploading(true);
+    let successCount = 0;
+    let newUploadedNames = [...uploadedFiles];
+    let latestAnalysis = analysis;
 
-    const formData = new FormData();
-    formData.append("file", file);
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const formData = new FormData();
+      formData.append("file", file);
 
-    try {
-      const response = await fetch(`${import.meta.env.BASE_URL}api/parse-document`, {
-        method: "POST",
-        body: formData
-      });
+      try {
+        const response = await fetch(`${import.meta.env.BASE_URL}api/parse-document`, {
+          method: "POST",
+          body: formData
+        });
 
-      const data = await response.json();
-      form.setValue("rawContent", data.text);
-      if (data.analysis) {
-        setAnalysis(data.analysis);
-        toast({ title: "اكتمل تحليل الملف بنجاح" });
-      } else {
-        toast({ title: "تم استخراج النص بنجاح" });
+        if (!response.ok) throw new Error("Failed to parse file");
+
+        const data = await response.json();
+        
+        // Append text instead of replacing
+        const currentText = form.getValues("rawContent") || "";
+        const newText = data.text || "";
+        const divider = currentText ? "\n\n" : "";
+        const header = `--- محتوى ملف (${file.name}) ---\n`;
+        form.setValue("rawContent", `${currentText}${divider}${header}${newText}`);
+
+        newUploadedNames.push(file.name);
+        successCount++;
+
+        // If there's AI analysis, let's keep it (prefer the first file's analysis if multiple have it)
+        if (data.analysis && !latestAnalysis) {
+          latestAnalysis = data.analysis;
+          setAnalysis(data.analysis);
+        }
+      } catch (err) {
+        toast({ 
+          title: `فشل استخراج النص من ${file.name}`, 
+          description: "تأكد من أن صيغة الملف مدعومة وحاول مرة أخرى.", 
+          variant: "destructive" 
+        });
       }
-    } catch (err) {
-      toast({ title: "فشل استخراج النص", description: "تأكد من أن الملف بصيغة مدعومة وحاول مرة أخرى.", variant: "destructive" });
-    } finally {
-      setIsUploading(false);
-      e.target.value = "";
     }
+
+    setUploadedFiles(newUploadedNames);
+    if (successCount > 0) {
+      toast({ title: `تم استخراج النصوص بنجاح من ${successCount} ملف/ملفات` });
+    }
+    setIsUploading(false);
+    e.target.value = "";
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 fade-in-up pb-10" dir="rtl">
-      <div>
+      <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => setLocation("/")}
+          className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors w-fit mb-1"
+        >
+          <ArrowRight className="w-4 h-4" />
+          <span>العودة للوحة التحكم</span>
+        </button>
         <h1 className="text-3xl font-bold text-foreground">مشروع جديد</h1>
-        <p className="text-muted-foreground mt-2">أنشئ مشروعاً بحثياً جديداً وقم بتنسيقه وإعداده باحترافية كاملة</p>
+        <p className="text-muted-foreground">أنشئ مشروعاً بحثياً جديداً وقم بتنسيقه وإعداده باحترافية كاملة</p>
       </div>
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
@@ -1509,22 +1541,138 @@ export function NewProject() {
 
                     {includeCover && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Cover Style */}
-                        <div className="space-y-1.5">
-                          <Label>تصميم وتنسيق الغلاف</Label>
-                          <Select value={coverStyle} onValueChange={setCoverStyle}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="اختر تصميم الغلاف" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="classic">كلاسيكي أكاديمي (Classic Academic)</SelectItem>
-                              <SelectItem value="modern">حديث أنيق (Modern Elegant)</SelectItem>
-                              <SelectItem value="framed">مؤطر بإطار أنيق (Framed Border)</SelectItem>
-                              {coversData?.items?.map(doc => (
-                                <SelectItem key={doc.id} value={`template_${doc.id}`}>قالب: {doc.title}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                        {/* Cover Style Selector - Premium Visual Card Grid */}
+                        <div className="md:col-span-2 space-y-3">
+                          <Label className="font-semibold text-slate-800 text-sm">تصميم وتنسيق الغلاف</Label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {/* Classic Card */}
+                            <div
+                              onClick={() => setCoverStyle("classic")}
+                              className={`cursor-pointer rounded-xl border p-3 flex flex-col justify-between transition-all relative ${
+                                coverStyle === "classic"
+                                  ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                                  : "border-border hover:border-slate-300 bg-card hover:bg-slate-50/50"
+                              }`}
+                            >
+                              <div className="aspect-[1/1.414] bg-white border border-slate-100 rounded-lg shadow-sm mb-2.5 overflow-hidden flex flex-col justify-between p-2 text-[6px] text-slate-400 select-none">
+                                <div className="flex justify-between border-b pb-0.5 border-slate-100">
+                                  <span>UNIVERSITY HEADER</span>
+                                  <span>الترويسة الأكاديمية</span>
+                                </div>
+                                <div className="text-center font-bold text-slate-800 my-auto text-[8px]">
+                                  العنوان الرئيسي للبحث
+                                </div>
+                                <div className="space-y-0.5 border-t pt-1 border-slate-100">
+                                  <div className="h-1 w-8 bg-slate-100 rounded-full mx-auto" />
+                                  <div className="h-1 w-6 bg-slate-100 rounded-full mx-auto" />
+                                </div>
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-xs text-slate-800 text-center mb-0.5">كلاسيكي أكاديمي</h4>
+                                <p className="text-[10px] text-muted-foreground text-center">ترويسة ثنائية اللغة وشعار بالمنتصف</p>
+                              </div>
+                              {coverStyle === "classic" && (
+                                <CheckCircle2 className="w-4 h-4 text-primary absolute top-2 left-2" />
+                              )}
+                            </div>
+
+                            {/* Modern Card */}
+                            <div
+                              onClick={() => setCoverStyle("modern")}
+                              className={`cursor-pointer rounded-xl border p-3 flex flex-col justify-between transition-all relative ${
+                                coverStyle === "modern"
+                                  ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                                  : "border-border hover:border-slate-300 bg-card hover:bg-slate-50/50"
+                              }`}
+                            >
+                              <div className="aspect-[1/1.414] bg-slate-900 border border-slate-800 rounded-lg shadow-sm mb-2.5 overflow-hidden flex flex-col justify-between p-2.5 text-[5px] text-slate-400 select-none relative">
+                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/40 via-slate-900 to-slate-950" />
+                                <div className="z-10 flex justify-between border-b pb-0.5 border-slate-800">
+                                  <span>MODERN LAYOUT</span>
+                                  <span>شعار الجامعة</span>
+                                </div>
+                                <div className="z-10 text-center font-bold text-amber-400 my-auto text-[8px] tracking-wide">
+                                  RESEARCH TITLE
+                                </div>
+                                <div className="z-10 space-y-0.5 border-t pt-1 border-slate-800">
+                                  <div className="h-1 w-10 bg-slate-800 rounded-full mx-auto" />
+                                  <div className="h-1 w-8 bg-slate-800 rounded-full mx-auto" />
+                                </div>
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-xs text-slate-800 text-center mb-0.5">حديث ملون</h4>
+                                <p className="text-[10px] text-muted-foreground text-center">خلفية داكنة مع تدرجات وزخارف ذهبية</p>
+                              </div>
+                              {coverStyle === "modern" && (
+                                <CheckCircle2 className="w-4 h-4 text-primary absolute top-2 left-2" />
+                              )}
+                            </div>
+
+                            {/* Framed Card */}
+                            <div
+                              onClick={() => setCoverStyle("framed")}
+                              className={`cursor-pointer rounded-xl border p-3 flex flex-col justify-between transition-all relative ${
+                                coverStyle === "framed"
+                                  ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                                  : "border-border hover:border-slate-300 bg-card hover:bg-slate-50/50"
+                              }`}
+                            >
+                              <div className="aspect-[1/1.414] bg-white border border-slate-100 rounded-lg shadow-sm mb-2.5 overflow-hidden flex flex-col justify-between p-2 text-[5px] text-slate-400 select-none relative">
+                                <div className="absolute inset-1 border-2 border-double border-amber-500/40 rounded" />
+                                <div className="z-10 flex justify-between px-1.5 pt-1.5 text-[5px]">
+                                  <span>FRAMED DESIGN</span>
+                                  <span>شعار الجامعة</span>
+                                </div>
+                                <div className="z-10 text-center font-bold text-slate-800 my-auto text-[8px] px-1">
+                                  العنوان المبروز للبحث
+                                </div>
+                                <div className="z-10 space-y-0.5 pb-1.5 text-center">
+                                  <div className="h-1 w-6 bg-slate-100 rounded-full mx-auto" />
+                                </div>
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-xs text-slate-800 text-center mb-0.5">إطار إسلامي</h4>
+                                <p className="text-[10px] text-muted-foreground text-center">إطار ذهبي هندسي مزدوج فاخر</p>
+                              </div>
+                              {coverStyle === "framed" && (
+                                <CheckCircle2 className="w-4 h-4 text-primary absolute top-2 left-2" />
+                              )}
+                            </div>
+
+                            {/* Custom Templates from library */}
+                            {coversData?.items?.map((doc: any) => {
+                              const value = `template_${doc.id}`;
+                              return (
+                                <div
+                                  key={doc.id}
+                                  onClick={() => setCoverStyle(value)}
+                                  className={`cursor-pointer rounded-xl border p-3 flex flex-col justify-between transition-all relative ${
+                                    coverStyle === value
+                                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                                      : "border-border hover:border-slate-300 bg-card hover:bg-slate-50/50"
+                                  }`}
+                                >
+                                  <div className="aspect-[1/1.414] bg-white border border-slate-100 rounded-lg shadow-sm mb-2.5 overflow-hidden flex items-center justify-center p-2 text-slate-400 select-none relative">
+                                    {doc.coverImageUrl ? (
+                                      <img src={doc.coverImageUrl} className="w-full h-full object-cover rounded" alt={doc.title} />
+                                    ) : (
+                                      <div className="flex flex-col items-center gap-1.5">
+                                        <BookOpen className="w-6 h-6 text-slate-300" />
+                                        <span className="text-[8px] text-center font-medium text-slate-400 line-clamp-2 px-1">{doc.title}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-xs text-slate-800 text-center mb-0.5 truncate">{doc.title}</h4>
+                                    <p className="text-[10px] text-muted-foreground text-center">قالب مخصص من المكتبة</p>
+                                  </div>
+                                  {coverStyle === value && (
+                                    <CheckCircle2 className="w-4 h-4 text-primary absolute top-2 left-2" />
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
 
                         {/* Logo Preset */}
@@ -1934,8 +2082,20 @@ export function NewProject() {
                               <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded font-mono">تحديث تلقائي</span>
                             </div>
                             <div className="p-4 flex justify-center bg-slate-100 min-h-[300px] overflow-hidden relative">
-                              <div className="w-[84mm] h-[120mm] overflow-hidden border shadow-lg rounded bg-white relative">
-                                <div className="w-[210mm] h-[297mm] origin-top-left scale-[0.4] absolute top-0 left-0">
+                              <div 
+                                className="overflow-hidden border shadow-lg rounded bg-white relative transition-all"
+                                style={{
+                                  width: orientation === "landscape" ? "120mm" : "84mm",
+                                  height: orientation === "landscape" ? "84mm" : "120mm",
+                                }}
+                              >
+                                <div 
+                                  className="origin-top-left scale-[0.4] absolute top-0 left-0"
+                                  style={{
+                                    width: orientation === "landscape" ? "297mm" : "210mm",
+                                    height: orientation === "landscape" ? "210mm" : "297mm",
+                                  }}
+                                >
                                   <iframe
                                     srcDoc={`<!DOCTYPE html><html lang="ar" dir="rtl" spellcheck="false"><head><meta charset="utf-8"/><style>html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: white; }</style></head><body spellcheck="false">${liveCoverHtml}</body></html>`}
                                     className="w-full h-full border-0"
@@ -2010,9 +2170,9 @@ export function NewProject() {
               </div>
               <Label htmlFor="file-upload" className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-4 py-2 whitespace-nowrap">
                 {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
-                <span>رفع ملف (Word / PDF)</span>
+                <span>رفع ملفات (Word / PDF / صور)</span>
               </Label>
-              <Input id="file-upload" type="file" accept=".docx,.doc,.pdf" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
+              <Input id="file-upload" type="file" accept=".docx,.doc,.pdf,.png,.jpg,.jpeg,.webp,.bmp" multiple className="hidden" onChange={handleFileUpload} disabled={isUploading} />
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -2070,10 +2230,28 @@ export function NewProject() {
               </div>
             )}
 
-            {fileName && (
-              <div className="flex items-center gap-2 text-sm text-primary bg-primary/5 p-3 rounded-md">
-                <FileText className="w-4 h-4" />
-                تم تحميل: {fileName}
+            {uploadedFiles.length > 0 && (
+              <div className="space-y-1.5 bg-primary/5 p-3 rounded-lg border border-primary/10">
+                <Label className="text-xs font-semibold text-primary">الملفات المرفوعة والمترجمة بنجاح:</Label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {uploadedFiles.map((name, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5 text-xs text-primary bg-white border border-primary/20 px-3 py-1 rounded-full shadow-sm">
+                      <FileText className="w-3.5 h-3.5 shrink-0 text-primary/80" />
+                      <span className="truncate max-w-[150px]">{name}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = uploadedFiles.filter((_, i) => i !== idx);
+                          setUploadedFiles(updated);
+                          toast({ title: `تمت إزالة ${name}` });
+                        }}
+                        className="text-primary/60 hover:text-red-500 hover:bg-red-50 rounded-full p-0.5 transition-colors font-bold text-sm leading-none"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

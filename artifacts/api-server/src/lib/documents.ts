@@ -2,6 +2,7 @@ import mammoth from "mammoth";
 import type { LayoutMetadata } from "@workspace/db";
 import { uploadBuffer } from "./storage";
 import { extractDocxLayout } from "./docx-layout";
+import { gemini, GEMINI_MODEL } from "./gemini";
 
 const STYLE_MAP = [
   "p[style-name='Title'] => h1.doc-title:fresh",
@@ -113,6 +114,33 @@ export async function extractPdfMetadata(buffer: Buffer): Promise<PdfMetadata> {
   }
 }
 
+export async function extractOcrText(buffer: Buffer, mimetype: string): Promise<string> {
+  if (!gemini) {
+    throw new Error("Gemini AI API key is not configured for OCR/Image processing.");
+  }
+  
+  try {
+    const response = await gemini.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: [
+        {
+          inlineData: {
+            data: buffer.toString("base64"),
+            mimeType: mimetype,
+          },
+        },
+        "أنت قارئ نصوص ضوئي (OCR) محترف ومختص باللغتين العربية والإنجليزية. استخرج واكتب جميع النصوص والبيانات المكتوبة في هذا المستند/الصورة بدقة متناهية وبدون حذف أي كلمة. حافظ على نفس التنسيق والفقرات وقوائم النقاط، ولا تضف أي تعليقات أو شروحات إضافية خارج النص المستخرج.",
+      ],
+    });
+    
+    return response.text?.trim() || "";
+  } catch (err) {
+    const { logger } = await import("./logger");
+    logger.error({ err }, "OCR extraction via Gemini failed");
+    throw new Error("فشل استخراج النص من الصورة/المستند الممسوح ضوئياً.");
+  }
+}
+
 export async function parseDocument(
   buffer: Buffer,
   filename: string,
@@ -120,6 +148,7 @@ export async function parseDocument(
 ): Promise<string> {
   const lower = filename.toLowerCase();
 
+  // 1. DOCX text extraction
   if (
     lower.endsWith(".docx") ||
     mimetype ===
@@ -129,22 +158,57 @@ export async function parseDocument(
     return result.value.trim();
   }
 
+  // 2. PDF text extraction (with fallback to Gemini OCR if scanned/empty)
   if (lower.endsWith(".pdf") || mimetype === "application/pdf") {
     const { PDFParse } = await import("pdf-parse");
     const parser = new PDFParse({ data: new Uint8Array(buffer) });
+    let text = "";
     try {
       const result = await parser.getText();
-      return (result.text ?? "").trim();
+      text = (result.text ?? "").trim();
+    } catch (parseErr) {
+      const { logger } = await import("./logger");
+      logger.warn({ parseErr }, "pdf-parse failed, will fallback to Gemini OCR");
     } finally {
       await parser.destroy();
     }
+
+    // If PDF text is extremely short or empty, it's likely a scanned PDF image or has complex vector layers.
+    // We fall back to Gemini PDF OCR which is extremely powerful.
+    if (text.length < 100) {
+      const { logger } = await import("./logger");
+      logger.info("PDF text layer is empty or too short. Falling back to Gemini OCR for scanned PDF.");
+      return await extractOcrText(buffer, "application/pdf");
+    }
+
+    return text;
   }
 
+  // 3. Plain Text extraction
   if (lower.endsWith(".txt") || mimetype === "text/plain") {
     return buffer.toString("utf-8").trim();
   }
 
+  // 4. Image OCR (PNG, JPG, JPEG, WEBP, BMP)
+  if (
+    lower.endsWith(".png") ||
+    lower.endsWith(".jpg") ||
+    lower.endsWith(".jpeg") ||
+    lower.endsWith(".webp") ||
+    lower.endsWith(".bmp") ||
+    mimetype.startsWith("image/")
+  ) {
+    let resolvedMimetype = mimetype;
+    if (!mimetype.startsWith("image/")) {
+      if (lower.endsWith(".png")) resolvedMimetype = "image/png";
+      else if (lower.endsWith(".webp")) resolvedMimetype = "image/webp";
+      else if (lower.endsWith(".bmp")) resolvedMimetype = "image/bmp";
+      else resolvedMimetype = "image/jpeg";
+    }
+    return await extractOcrText(buffer, resolvedMimetype);
+  }
+
   throw new Error(
-    "Unsupported file type. Please upload a Word (.docx), PDF, or text file.",
+    "Unsupported file type. Please upload a Word (.docx), PDF, text file, or image (.png, .jpg, .jpeg, .webp).",
   );
 }
