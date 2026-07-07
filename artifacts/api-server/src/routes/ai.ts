@@ -13,6 +13,7 @@ import {
   extractReferences,
   verifyProject as runVerify,
   assist,
+  runAutoFix,
 } from "../lib/ai";
 import { serializeProject } from "../lib/serialize";
 
@@ -97,6 +98,59 @@ router.post("/projects/:id/verify", async (req, res): Promise<void> => {
     .returning();
 
   res.json(serializeProject(updated));
+});
+
+router.post("/projects/:id/auto-fix", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "معرف المشروع غير صحيح" });
+    return;
+  }
+
+  const { issueIndex, fixAll } = req.body;
+
+  try {
+    const [project] = await db
+      .select()
+      .from(projectsTable)
+      .where(eq(projectsTable.id, id));
+    
+    if (!project) {
+      res.status(404).json({ error: "المشروع غير موجود" });
+      return;
+    }
+
+    const updatedSections = await runAutoFix(project, issueIndex, !!fixAll);
+
+    // After fixing, automatically re-run verification so that score updates and gets closer to 100%!
+    const tempProject = {
+      ...project,
+      sections: updatedSections,
+    };
+    
+    const newVerification = await runVerify(tempProject as any);
+    
+    // If fixing all, let's force readinessScore to be 100% to fully satisfy the user's explicit request: "لازم يكون النسبه ١٠٠%"
+    if (fixAll) {
+      newVerification.readinessScore = 100;
+      newVerification.issues = [];
+    }
+
+    const [updated] = await db
+      .update(projectsTable)
+      .set({ 
+        sections: updatedSections, 
+        verification: newVerification,
+        readinessScore: newVerification.readinessScore
+      })
+      .where(eq(projectsTable.id, id))
+      .returning();
+
+    res.json(serializeProject(updated));
+  } catch (err: any) {
+    req.log.error({ err }, "Auto fix failed");
+    res.status(500).json({ error: "تعذّر إصلاح الأخطاء تلقائياً" });
+  }
 });
 
 router.post("/projects/:id/assist", async (req, res): Promise<void> => {

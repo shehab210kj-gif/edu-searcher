@@ -53,7 +53,7 @@ export function LibraryPreview() {
           queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetStatsQueryKey() });
           toast({ title: "تم إنشاء نسخة قابلة للتحرير" });
-          setLocation(`/projects/${project.id}`);
+          setLocation(`/projects/${project.id}?back=library`);
         },
         onError: () => {
           toast({

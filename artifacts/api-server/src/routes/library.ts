@@ -28,6 +28,7 @@ import {
 } from "../lib/serialize";
 import { parseDocument, extractPdfMetadata, parseDocxToRich } from "../lib/documents";
 import { gemini, GEMINI_MODEL, chatStructured } from "../lib/gemini";
+import { Type } from "@google/genai";
 import { buildFormattedDocument } from "../lib/format-pipeline";
 
 const DOCX_MIME =
@@ -743,17 +744,78 @@ ${JSON.stringify(docList, null, 2)}
       });
       const MatchResultsSchema = z.array(MatchResultSchema);
 
-      const matches = await chatStructured(systemPrompt, userPrompt, MatchResultsSchema);
+      const matchResponseSchema = {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            documentId: { type: Type.INTEGER },
+            similarityScore: { type: Type.INTEGER },
+            explanation: { type: Type.STRING },
+          },
+          required: ["documentId", "similarityScore", "explanation"],
+        },
+      };
 
-      const results = matches
-        .map((m) => {
-          const doc = allDocs.find((d) => d.id === m.documentId);
-          return {
-            ...m,
-            document: doc ? serializeLibraryDocumentSummary(doc) : null,
-          };
-        })
-        .filter((r) => r.document !== null && r.similarityScore > 0);
+      let results: any[] = [];
+      try {
+        const matches = await chatStructured(systemPrompt, userPrompt, MatchResultsSchema, {
+          responseSchema: matchResponseSchema as any,
+          temperature: 0.2
+        });
+        results = matches
+          .map((m) => {
+            const doc = allDocs.find((d) => d.id === m.documentId);
+            return {
+              ...m,
+              document: doc ? serializeLibraryDocumentSummary(doc) : null,
+            };
+          })
+          .filter((r) => r.document !== null && r.similarityScore > 0);
+      } catch (aiErr) {
+        req.log.warn({ aiErr }, "Gemini smart search matching failed, falling back to keyword text match");
+        
+        // Simple fallback matching algorithm
+        const searchWords = extractedText
+          .toLowerCase()
+          .replace(/[^\p{L}\p{N}\s]/gu, " ")
+          .split(/\s+/)
+          .filter(w => w.length > 2);
+
+        results = allDocs
+          .map((doc) => {
+            let score = 0;
+            const titleLower = (doc.title || "").toLowerCase();
+            const snippetLower = (doc.richContent || "").toLowerCase().slice(0, 1000);
+            
+            // Count matching words
+            let matchedWords = 0;
+            for (const word of searchWords) {
+              if (titleLower.includes(word)) {
+                score += 20;
+                matchedWords++;
+              } else if (snippetLower.includes(word)) {
+                score += 5;
+                matchedWords++;
+              }
+            }
+
+            // Cap similarity score between 0 and 95
+            const similarityScore = Math.min(95, Math.max(0, Math.round(score)));
+            
+            return {
+              documentId: doc.id,
+              similarityScore,
+              explanation: matchedWords > 0 
+                ? `مطابقة تلقائية مبنية على تطابق كلمات مفتاحية للتكليف (${matchedWords} كلمة مشتركة).`
+                : "تم اقتراح هذا المستند كنموذج استرشادي عام لتشابه تخصص البحث.",
+              document: serializeLibraryDocumentSummary(doc)
+            };
+          })
+          .filter(r => r.similarityScore > 5)
+          .sort((a, b) => b.similarityScore - a.similarityScore)
+          .slice(0, 5); // top 5 matches
+      }
 
       res.json({ results });
     } catch (err) {

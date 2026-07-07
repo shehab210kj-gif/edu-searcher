@@ -145,6 +145,17 @@ function coverHtml(layout: LayoutMetadata, forDocx = false): string {
   const uniNameAr = c.university || "جامعة الملك سعود";
   const uniNameEn = getEnglishUniversity(uniNameAr);
 
+  const arL1 = layout.arabicHeader1 || "المملكة العربية السعودية";
+  const arL2 = layout.arabicHeader2 || "وزارة التعليم";
+  const arL3 = layout.arabicHeader3 || uniNameAr;
+  const enL1 = layout.englishHeader1 || "Kingdom of Saudi Arabia";
+  const enL2 = layout.englishHeader2 || "Ministry of Education";
+  const enL3 = layout.englishHeader3 || uniNameEn;
+
+  const alignClass = layout.detailsAlign || "center";
+  const dVertical = layout.detailsVertical || "bottom";
+  const tPosition = layout.titlePosition || "center";
+
   const logoHtml = c.logoUrl 
     ? `<img src="${c.logoUrl}" style="max-height:90px; max-width:90px;" />` 
     : `<div style="height:90px; width:90px;"></div>`;
@@ -153,33 +164,35 @@ function coverHtml(layout: LayoutMetadata, forDocx = false): string {
     <table style="width: 100%; border: none; border-collapse: collapse; margin-bottom: 24pt;">
       <tr style="border: none;">
         <td style="width: 38%; border: none; text-align: right; vertical-align: top; font-family: 'Amiri', serif; font-size: 11pt; padding: 0; line-height: 1.4;">
-          المملكة العربية السعودية<br/>
-          وزارة التعليم<br/>
-          ${uniNameAr}<br/>
-          ${c.faculty || ""}<br/>
-          ${c.department || ""}
+          ${arL1}<br/>
+          ${arL2}<br/>
+          ${arL3}
+          ${c.faculty ? `<br/>كلية ${c.faculty}` : ''}
+          ${c.department ? `<br/>قسم ${c.department}` : ''}
         </td>
         <td style="width: 24%; border: none; text-align: center; vertical-align: middle; padding: 0;">
           ${logoHtml}
         </td>
         <td style="width: 38%; border: none; text-align: left; vertical-align: top; font-family: 'Amiri', serif; font-size: 11pt; padding: 0; line-height: 1.4; direction: ltr;">
-          Kingdom of Saudi Arabia<br/>
-          Ministry of Education<br/>
-          ${uniNameEn}
+          ${enL1}<br/>
+          ${enL2}<br/>
+          ${enL3}
+          ${c.faculty ? `<br/>Faculty of ${c.faculty}` : ''}
+          ${c.department ? `<br/>Department of ${c.department}` : ''}
         </td>
       </tr>
     </table>
   `;
 
-  const lines = [
-    headerTable,
-    c.title
-      ? `<h1 style="text-align:center; margin-top:80pt; font-size:24pt; font-weight:bold; border:none; background:none; padding:0; color:black;">${c.title}</h1>`
-      : "",
-    c.subtitle
-      ? `<p style="text-align:center; font-size:14pt; font-style:italic; margin-top:12pt; margin-bottom:60pt;">${c.subtitle}</p>`
-      : "",
-    `<div style="margin-top: 60pt; text-align: center; font-size: 14pt; line-height: 2.0; font-family: 'Amiri', serif;">
+  const titleBlock = c.title
+    ? `<h1 style="text-align:center; margin-top:50pt; font-size:24pt; font-weight:bold; border:none; background:none; padding:0; color:black;">${c.title}</h1>`
+    : "";
+
+  const subtitleBlock = c.subtitle
+    ? `<p style="text-align:center; font-size:14pt; font-style:italic; margin-top:12pt; margin-bottom:40pt;">${c.subtitle}</p>`
+    : "";
+
+  const detailsBlock = `<div style="margin-top: 40pt; text-align: ${alignClass}; font-size: 14pt; line-height: 2.0; font-family: 'Amiri', serif;">
       ${c.studentName ? `<p>إعداد الطالب/الطالبة: <strong>${c.studentName}</strong></p>` : ""}
       ${(c as any).studentId ? `<p>الرقم الجامعي: <strong>${(c as any).studentId}</strong></p>` : ""}
       ${(c as any).section ? `<p>الشعبة: <strong>${(c as any).section}</strong></p>` : ""}
@@ -188,8 +201,37 @@ function coverHtml(layout: LayoutMetadata, forDocx = false): string {
       ${(c as any).courseName ? `<p>المقرر: <strong>${(c as any).courseName}</strong></p>` : ""}
       ${(c as any).trainingAgency ? `<p>جهة التدريب: <strong>${(c as any).trainingAgency}</strong></p>` : ""}
       ${c.year ? `<p>العام الجامعي: <strong>${c.year}</strong></p>` : ""}
-    </div>`
-  ];
+    </div>`;
+
+  let lines: string[] = [];
+  lines.push(headerTable);
+
+  if (dVertical === "top") {
+    lines.push(detailsBlock);
+    lines.push(titleBlock);
+    lines.push(subtitleBlock);
+  } else if (dVertical === "center") {
+    if (tPosition === "top") {
+      lines.push(titleBlock);
+      lines.push(subtitleBlock);
+      lines.push(detailsBlock);
+    } else {
+      lines.push(detailsBlock);
+      lines.push(titleBlock);
+      lines.push(subtitleBlock);
+    }
+  } else {
+    // details at bottom
+    if (tPosition === "top") {
+      lines.push(titleBlock);
+      lines.push(subtitleBlock);
+      lines.push(detailsBlock);
+    } else {
+      lines.push(titleBlock);
+      lines.push(subtitleBlock);
+      lines.push(detailsBlock);
+    }
+  }
 
   return lines.filter(Boolean).join("\n");
 }

@@ -378,3 +378,98 @@ ${context ? `النص المحدد للعمل عليه:\n"""\n${truncate(context
     temperature: 0.4,
   });
 }
+
+export async function runAutoFix(
+  project: Project,
+  issueIndex?: number,
+  fixAll: boolean = false,
+): Promise<Section[]> {
+  const system = `أنت مصحح وباحث أكاديمي محترف وخبير في تحرير البحوث الدراسية وتعديلها. مهمتك مراجعة الأقسام وتعديلها أو إكمال الأجزاء الناقصة وحل المشكلات المكتشفة باللغة العربية الفصحى.`;
+
+  const issuesList = (project.verification as any)?.issues || [];
+  let targetIssues = [];
+  if (fixAll) {
+    targetIssues = issuesList;
+  } else if (issueIndex !== undefined && issuesList[issueIndex]) {
+    targetIssues = [issuesList[issueIndex]];
+  }
+
+  if (targetIssues.length === 0) {
+    return project.sections as any;
+  }
+
+  const issuesText = targetIssues.map((issue: any, index: number) => {
+    return `[مشكلة ${index + 1}]
+النوع: ${issue.type}
+الخطورة: ${issue.severity}
+الموقع: ${issue.location || "عام"}
+الوصف: ${issue.message}
+الاقتراح: ${issue.suggestion || "لا يوجد"}`;
+  }).join("\n\n");
+
+  const sectionsListText = (project.sections as any[])
+    .map((s) => `### ${s.heading} (Level: ${s.level})\n${s.content}`)
+    .join("\n\n");
+
+  const user = `قم بمراجعة البحث وتعديل الأقسام أو إكمال الأجزاء الناقصة لحل المشكلات التالية:
+"""
+${issuesText}
+"""
+
+الأقسام الحالية للبحث:
+\"\"\"
+${sectionsListText}
+\"\"\"
+
+التعليمات:
+1. قم بحل المشكلات وتحديث محتوى الأقسام المتأثرة مباشرة (بما في ذلك إكمال الأجزاء أو تصحيح الأخطاء اللغوية أو تنسيق المراجع).
+2. إذا كانت المشكلة تشير إلى قسم ناقص بالكامل (Missing Section)، يرجى إضافة هذا القسم مكتملاً ومكتوباً بأسلوب أكاديمي رصين ومفصل بالكامل.
+3. لا تقم بحذف أي أقسام جيدة موجودة حالياً.
+4. أعد قائمة الأقسام كاملة ومرتبة بالترتيب الصحيح للبحث الدراسي بعد التعديل.
+5. أعد كائن JSON بالحقل "sections" وهي مصفوفة من { heading (عنوان القسم بالعربية), level (1 أو 2), content (المحتوى الأكاديمي التفصيلي والكامل والمعدّل باللغة العربية مع القوائم النقطية) }.`;
+
+  const fixResultsZod = z.object({
+    sections: z.array(
+      z.object({
+        heading: z.string(),
+        level: z.union([z.literal(1), z.literal(2)]),
+        content: z.string(),
+      })
+    )
+  });
+
+  const fixResultsSchema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      sections: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            heading: { type: Type.STRING },
+            level: { type: Type.INTEGER },
+            content: { type: Type.STRING },
+          },
+          required: ["heading", "level", "content"],
+        },
+      },
+    },
+    required: ["sections"],
+  };
+
+  const responseData = await chatStructured(system, user, fixResultsZod, {
+    responseSchema: fixResultsSchema,
+    temperature: 0.3,
+  });
+
+  const localSlugKey = (text: string, index: number) => {
+    return text.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-") + "-" + index;
+  };
+
+  return responseData.sections.map((s, i) => ({
+    key: localSlugKey(s.heading, i),
+    heading: s.heading,
+    level: s.level,
+    content: s.content,
+  })) as any;
+}

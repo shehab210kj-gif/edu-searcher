@@ -10,12 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, UploadCloud, FileText, Wand2, Settings2, Type,
   AlignRight, CheckSquare, Copy, BookOpen, Lightbulb, ChevronDown, ChevronUp,
-  Layout, AlignCenter, AlignLeft, AlignJustify, GraduationCap, ListTodo
+  Layout, AlignCenter, AlignLeft, AlignJustify, GraduationCap, ListTodo, CheckCircle2, Eye
 } from "lucide-react";
 import { getListProjectsQueryKey, getGetStatsQueryKey } from "@workspace/api-client-react";
 
@@ -179,6 +180,38 @@ export function NewProject() {
   const [englishHeader2, setEnglishHeader2] = useState("Ministry of Education");
   const [englishHeader3, setEnglishHeader3] = useState("");
 
+  const [detailsVertical, setDetailsVertical] = useState<"top" | "center" | "bottom">("bottom");
+  const [titlePosition, setTitlePosition] = useState<"top" | "center" | "bottom">("center");
+  const [decorLineWidth, setDecorLineWidth] = useState<number>(200);
+  const [decorLineHeight, setDecorLineHeight] = useState<number>(3);
+  const [decorLineColor, setDecorLineColor] = useState<string>("#1a1a1a");
+  const [showDecorLine, setShowDecorLine] = useState<boolean>(true);
+
+  const [previewTemplate, setPreviewTemplate] = useState<any>(null);
+
+  const applyFormattingTemplate = (t: any) => {
+    if (!t || !t.formatting) return;
+    const f = t.formatting;
+    if (f.fontFamily) setFontFamily(f.fontFamily);
+    if (f.fontSize) setFontSize(f.fontSize.toString());
+    if (f.headingSize) setHeadingSize(f.headingSize.toString());
+    if (f.subheadingSize) setSubheadingSize(f.subheadingSize.toString());
+    if (f.lineSpacing) setLineSpacing(f.lineSpacing.toString());
+    if (f.paragraphAlign) setParagraphAlign(f.paragraphAlign);
+    if (f.firstLineIndent !== undefined) setFirstLineIndent(f.firstLineIndent.toString());
+    if (f.pageSize) setPageSize(f.pageSize);
+    if (f.marginTop !== undefined) setMarginTop(f.marginTop.toString());
+    if (f.marginBottom !== undefined) setMarginBottom(f.marginBottom.toString());
+    if (f.marginLeft !== undefined) setMarginLeft(f.marginLeft.toString());
+    if (f.marginRight !== undefined) setMarginRight(f.marginRight.toString());
+    
+    form.setValue("templateId", t.id);
+    toast({
+      title: "تم تطبيق قالب التنسيق تلقائياً",
+      description: `تم تحديث الخط والهوامش والتباعد وفقاً لقالب "${t.name}"`,
+    });
+  };
+
   const [enableSpellCheck, setEnableSpellCheck] = useState(true);
   const [enableDuplicateCheck, setEnableDuplicateCheck] = useState(true);
   const [selectedParts, setSelectedParts] = useState<string[]>(["cover", "toc", "intro", "body", "conclusion", "refs"]);
@@ -234,7 +267,13 @@ export function NewProject() {
     arLine3?: string,
     enLine1?: string,
     enLine2?: string,
-    enLine3?: string
+    enLine3?: string,
+    detailsVertical?: string,
+    titlePosition?: string,
+    decorLineWidth?: number,
+    decorLineHeight?: number,
+    decorLineColor?: string,
+    showDecorLine?: boolean
   ) => {
     if (style.startsWith("template_")) {
       if (selectedCoverTemplate && selectedCoverTemplate.richContent) {
@@ -263,7 +302,7 @@ export function NewProject() {
       return `
 <div style="font-family:'Cairo','Segoe UI','Arial',sans-serif;direction:rtl;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;background:linear-gradient(160deg,#0a1628 0%,#0d2347 40%,#1a3a6b 70%,#0f2a50 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative;box-sizing:border-box;">
   <svg style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0.06;pointer-events:none;" xmlns="http://www.w3.org/2000/svg">
-    <defs><pattern id="hex" x="0" y="0" width="60" height="52" patternUnits="userSpaceOnUse"><polygon points="30,2 58,17 58,47 30,62 2,47 2,17" fill="none" stroke="#C9A84C" stroke-width="1"/></pattern></defs>
+    <pattern id="hex" x="0" y="0" width="60" height="52" patternUnits="userSpaceOnUse"><polygon points="30,2 58,17 58,47 30,62 2,47 2,17" fill="none" stroke="#C9A84C" stroke-width="1"/></pattern>
     <rect width="100%" height="100%" fill="url(#hex)"/>
   </svg>
   <div style="background:linear-gradient(90deg,#C9A84C,#F0D070,#C9A84C);height:5pt;width:100%;flex-shrink:0;position:relative;z-index:1;"></div>
@@ -378,12 +417,14 @@ export function NewProject() {
 
     const alignClass = detailsAlign || "center"; // "right" | "left" | "center"
 
-    // Construct Columns Order based on headerLayout
+    // Construct Columns Content with faculty & department added in side columns
     let leftColumnContent = `
       <div style="text-align:left;direction:ltr;font-family:'Arial','Calibri',sans-serif;font-size:9.5pt;font-weight:700;color:${borderCol};line-height:1.8;flex:1;">
         ${enL1}<br/>
         ${enL2}<br/>
         ${enL3}
+        ${fac ? `<br/>Faculty of ${fac}` : ''}
+        ${dept ? `<br/>Department of ${dept}` : ''}
       </div>
     `;
     let centerColumnContent = `
@@ -396,13 +437,12 @@ export function NewProject() {
         ${arL1}<br/>
         ${arL2}<br/>
         ${arL3}
-        ${fac ? `<br/>${fac}` : ''}
-        ${dept ? `<br/>${dept}` : ''}
+        ${fac ? `<br/>كلية ${fac}` : ''}
+        ${dept ? `<br/>قسم ${dept}` : ''}
       </div>
     `;
 
     if (headerLayout === "logo-right") {
-      // Logo on right, stacked header on left
       rightColumnContent = `
         <div style="text-align:right;flex:0 0 auto;padding:0 12pt;">
           ${logo ? `<img src="${logo}" style="max-height:60pt;max-width:90pt;display:block;margin:0 auto 5pt;" />` : `<div style="width:45pt;height:45pt;border-radius:50%;border:2pt solid ${borderCol};margin:0 auto 5pt;display:flex;align-items:center;justify-content:center;margin-left:auto;margin-right:auto;"><span style="color:${borderCol};font-size:16pt;">✦</span></div>`}
@@ -411,14 +451,13 @@ export function NewProject() {
       centerColumnContent = `<div style="flex:1;"></div>`;
       leftColumnContent = `
         <div style="text-align:left;direction:ltr;font-family:'Arial','Calibri',sans-serif;font-size:9.5pt;font-weight:700;color:${borderCol};line-height:1.8;flex:1;">
-          ${enL1}<br/>${enL2}<br/>${enL3}
-          <div style="margin-top:10pt;text-align:left;direction:rtl;font-size:10pt;font-family:'Traditional Arabic',serif;">
-            ${arL1}<br/>${arL2}<br/>${arL3}${fac ? `<br/>${fac}` : ''}${dept ? `<br/>${dept}` : ''}
+          ${enL1}<br/>${enL2}<br/>${enL3}${fac ? `<br/>Faculty of ${fac}` : ''}${dept ? `<br/>Department of ${dept}` : ''}
+          <div style="margin-top:10pt;text-align:right;direction:rtl;font-size:10pt;font-family:'Traditional Arabic',serif;">
+            ${arL1}<br/>${arL2}<br/>${arL3}${fac ? `<br/>كلية ${fac}` : ''}${dept ? `<br/>قسم ${dept}` : ''}
           </div>
         </div>
       `;
     } else if (headerLayout === "logo-left") {
-      // Logo on left, stacked header on right
       leftColumnContent = `
         <div style="text-align:left;flex:0 0 auto;padding:0 12pt;">
           ${logo ? `<img src="${logo}" style="max-height:60pt;max-width:90pt;display:block;margin:0 auto 5pt;" />` : `<div style="width:45pt;height:45pt;border-radius:50%;border:2pt solid ${borderCol};margin:0 auto 5pt;display:flex;align-items:center;justify-content:center;margin-left:auto;margin-right:auto;"><span style="color:${borderCol};font-size:16pt;">✦</span></div>`}
@@ -427,38 +466,44 @@ export function NewProject() {
       centerColumnContent = `<div style="flex:1;"></div>`;
       rightColumnContent = `
         <div style="text-align:right;direction:rtl;font-size:10pt;font-weight:700;color:${borderCol};line-height:1.8;flex:1;">
-          ${arL1}<br/>${arL2}<br/>${arL3}${fac ? `<br/>${fac}` : ''}${dept ? `<br/>${dept}` : ''}
-          <div style="margin-top:10pt;text-align:right;direction:ltr;font-size:9.5pt;font-family:'Arial','Calibri',sans-serif;">
-            ${enL1}<br/>${enL2}<br/>${enL3}
+          ${arL1}<br/>${arL2}<br/>${arL3}${fac ? `<br/>كلية ${fac}` : ''}${dept ? `<br/>قسم ${dept}` : ''}
+          <div style="margin-top:10pt;text-align:left;direction:ltr;font-size:9.5pt;font-family:'Arial','Calibri',sans-serif;">
+            ${enL1}<br/>${enL2}<br/>${enL3}${fac ? `<br/>Faculty of ${fac}` : ''}${dept ? `<br/>Department of ${dept}` : ''}
           </div>
         </div>
       `;
     }
 
-    return `
-<div style="font-family:'Traditional Arabic','Amiri','Times New Roman',serif;direction:rtl;width:100%;height:100%;background:#ffffff;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative;display:flex;flex-direction:column;box-sizing:border-box;">
-  <div style="${frameBorderOuter}"></div>
-  <div style="${frameBorderInner}"></div>
-  <div style="padding:24pt 24pt;display:flex;flex-direction:column;flex:1;justify-content:space-between;box-sizing:border-box;">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0;direction:ltr;width:100%;">
-      ${leftColumnContent}
-      ${centerColumnContent}
-      ${rightColumnContent}
-    </div>
-    <div style="height:1pt;background:#cccccc;margin:10pt 0;flex-shrink:0;"></div>
-    <div style="text-align:center;flex-shrink:0;margin-bottom:0;">
-      ${fac ? `<div style="font-size:11pt;color:#333;margin-bottom:3pt;">${fac}</div>` : ''}
-      ${dept ? `<div style="font-size:10pt;color:#555;margin-bottom:6pt;">${dept}</div>` : ''}
+    const dVertical = detailsVertical || "bottom"; // "top" | "center" | "bottom"
+    const tPosition = titlePosition || "center"; // "top" | "center" | "bottom"
+    const dLineWidth = decorLineWidth !== undefined ? decorLineWidth : 200;
+    const dLineHeight = decorLineHeight !== undefined ? decorLineHeight : 3;
+    const dLineColor = decorLineColor || "#1a1a1a";
+    const sDecorLine = showDecorLine !== false;
+
+    // Flex order mapping
+    let detailsOrder = 5;
+    if (dVertical === "top") detailsOrder = 1;
+    else if (dVertical === "center") detailsOrder = 3;
+
+    let titleOrder = 4;
+    if (tPosition === "top") titleOrder = 2;
+    else if (tPosition === "bottom") titleOrder = 6;
+
+    // Construct Blocks
+    const titleGroupBlock = `
+    <div style="text-align:center;order:${titleOrder};display:flex;flex-direction:column;align-items:center;justify-content:center;margin:8pt auto;max-width:400pt;width:100%;flex-shrink:0;">
       <h1 style="font-size:${Math.min(22, Math.max(16, Math.round(340 / Math.max(title.length, 8))))}pt;font-weight:800;color:#1a1a1a;line-height:1.5;margin:8pt auto 8pt;max-width:400pt;">${title}</h1>
-      <div style="width:200pt;height:3pt;background:#1a1a1a;margin:0 auto 12pt;"></div>
-    </div>
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:10pt 0;">
+      ${sDecorLine ? `<div style="width:${dLineWidth}pt;height:${dLineHeight}pt;background:${dLineColor};margin:12pt auto 12pt;"></div>` : ''}
       ${subtitle ? `<div style="font-size:12pt;color:#333;font-weight:600;margin-bottom:10pt;">${subtitle}</div>` : ''}
       ${cName ? `<div style="font-size:11pt;color:#555;margin-bottom:8pt;"><strong style="color:#111;">المقرر:</strong> ${cName}</div>` : ''}
       ${trainAgency ? `<div style="font-size:11pt;color:#555;margin-bottom:8pt;"><strong style="color:#111;">جهة التدريب:</strong> ${trainAgency}</div>` : ''}
       ${deg ? `<div style="display:inline-block;background:${borderCol};color:#fff;font-size:10pt;padding:4pt 24pt;border-radius:3pt;margin-top:6pt;margin-left:auto;margin-right:auto;">${deg}</div>` : ''}
     </div>
-    <div style="flex-shrink:0;text-align:${alignClass};padding-top:12pt;border-top:0.5pt solid #cccccc;">
+    `;
+
+    const detailsBlock = `
+    <div style="flex-shrink:0;text-align:${alignClass};padding-top:12pt;padding-bottom:12pt;border-top:${dVertical === "bottom" ? "0.5pt solid #cccccc" : "none"};border-bottom:${dVertical === "top" ? "0.5pt solid #cccccc" : "none"};order:${detailsOrder};width:100%;">
       <div style="font-size:11.5pt;line-height:2.0;color:#1a1a1a;">
         ${student ? `<div><strong style="color:#1a1a1a;">إعداد الطالب: </strong>${student}</div>` : ''}
         ${sId ? `<div><strong style="color:#1a1a1a;">الرقم الجامعي: </strong>${sId}</div>` : ''}
@@ -468,6 +513,21 @@ export function NewProject() {
         ${year ? `<div style="font-size:11pt;color:#444;">${year}</div>` : ''}
       </div>
     </div>
+    `;
+
+    return `
+<div style="font-family:'Traditional Arabic','Amiri','Times New Roman',serif;direction:rtl;width:100%;height:100%;background:#ffffff;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative;display:flex;flex-direction:column;box-sizing:border-box;">
+  <div style="${frameBorderOuter}"></div>
+  <div style="${frameBorderInner}"></div>
+  <div style="padding:24pt 24pt;display:flex;flex-direction:column;flex:1;justify-content:space-between;box-sizing:border-box;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0;direction:ltr;width:100%;order:0;">
+      ${leftColumnContent}
+      ${centerColumnContent}
+      ${rightColumnContent}
+    </div>
+    <div style="height:1pt;background:#cccccc;margin:10pt 0;flex-shrink:0;order:0.5;"></div>
+    ${titleGroupBlock}
+    ${detailsBlock}
   </div>
 </div>`;
   };
@@ -518,7 +578,13 @@ export function NewProject() {
       arabicHeader3,
       englishHeader1,
       englishHeader2,
-      englishHeader3
+      englishHeader3,
+      detailsVertical,
+      titlePosition,
+      decorLineWidth,
+      decorLineHeight,
+      decorLineColor,
+      showDecorLine
     );
     setLiveCoverHtml(html);
   }, [
@@ -550,7 +616,13 @@ export function NewProject() {
     arabicHeader3,
     englishHeader1,
     englishHeader2,
-    englishHeader3
+    englishHeader3,
+    detailsVertical,
+    titlePosition,
+    decorLineWidth,
+    decorLineHeight,
+    decorLineColor,
+    showDecorLine
   ]);
 
   const togglePart = (partId: string) => {
@@ -625,6 +697,12 @@ export function NewProject() {
       englishHeader1,
       englishHeader2,
       englishHeader3,
+      detailsVertical,
+      titlePosition,
+      decorLineWidth,
+      decorLineHeight,
+      decorLineColor,
+      showDecorLine,
       cover: includeCover ? {
         title: values.title,
         subtitle: coverSubtitle,
@@ -780,18 +858,82 @@ export function NewProject() {
                 </Select>
                 {form.formState.errors.citationStyle && <p className="text-xs text-destructive">{form.formState.errors.citationStyle.message}</p>}
               </div>
+            </div>
 
-              {/* Template */}
-              <div className="space-y-1.5">
-                <Label>قالب التنسيق (اختياري)</Label>
-                <Select onValueChange={(val) => form.setValue("templateId", parseInt(val))} defaultValue={form.getValues("templateId")?.toString()}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="بدون قالب مسبق" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.isArray(templates) && templates.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+            {/* Template Visual Card List */}
+            <div className="space-y-3 mt-4 border-t pt-4">
+              <Label className="text-sm font-bold text-slate-800">قالب التنسيق الأكاديمي (اختياري)</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Default Custom Card */}
+                <div 
+                  onClick={() => {
+                    form.setValue("templateId", undefined as any);
+                    toast({ title: "تم إلغاء تحديد القالب", description: "يمكنك الآن تعديل التنسيق يدوياً بالكامل." });
+                  }}
+                  className={`border rounded-xl p-4 cursor-pointer flex flex-col justify-between transition-all hover:shadow-md ${!form.watch("templateId") ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border bg-white"}`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-sm text-slate-900">تنسيق مخصص بالكامل</h4>
+                      <p className="text-xs text-muted-foreground">قم بتهيئة كافة الإعدادات والخطوط بنفسك يدوياً</p>
+                    </div>
+                    {!form.watch("templateId") && <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />}
+                  </div>
+                  <div className="mt-4 pt-3 border-t text-[11px] text-muted-foreground flex justify-between">
+                    <span>إعدادات حرة</span>
+                    <span>خصائص يدوية</span>
+                  </div>
+                </div>
+
+                {Array.isArray(templates) && templates.map(t => {
+                  const isSelected = form.watch("templateId") === t.id;
+                  return (
+                    <div 
+                      key={t.id}
+                      className={`border rounded-xl p-4 cursor-pointer flex flex-col justify-between transition-all hover:shadow-md ${isSelected ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border bg-white"}`}
+                    >
+                      <div onClick={() => applyFormattingTemplate(t)} className="flex items-start justify-between flex-1">
+                        <div className="space-y-1 relative">
+                          <h4 className="font-bold text-sm text-slate-900">{t.name}</h4>
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{t.description || "قالب تنسيق أكاديمي جاهز للبحوث والواجبات"}</p>
+                        </div>
+                        {isSelected && <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />}
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t flex items-center justify-between gap-2">
+                        <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                          <span>الخط: {t.formatting.fontFamily || "Traditional Arabic"}</span>
+                          <span>•</span>
+                          <span>التباعد: {t.formatting.lineSpacing || "1.5"}</span>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-7 px-2 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewTemplate(t);
+                            }}
+                          >
+                            <Eye className="w-3 h-3 ml-1" />
+                            معاينة
+                          </Button>
+                          <Button 
+                            type="button" 
+                            variant={isSelected ? "secondary" : "outline"} 
+                            size="sm" 
+                            className="h-7 px-2.5 text-xs font-semibold"
+                            onClick={() => applyFormattingTemplate(t)}
+                          >
+                            استخدام
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </CardContent>
@@ -1653,8 +1795,105 @@ export function NewProject() {
                           </div>
                         </div>
 
+                        {/* Custom Layout Position Controls */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-3">
+                          <div className="space-y-1.5">
+                            <Label>موضع بيانات الطالب والمشرف رأسيّاً</Label>
+                            <Select value={detailsVertical} onValueChange={(val: any) => setDetailsVertical(val)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="اختر الموضع الرأسي" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="top">أعلى الصفحة (تحت الترويسة)</SelectItem>
+                                <SelectItem value="center">وسط الصفحة</SelectItem>
+                                <SelectItem value="bottom">أسفل الصفحة (افتراضي)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label>موضع العنوان الرئيسي للبحث</Label>
+                            <Select value={titlePosition} onValueChange={(val: any) => setTitlePosition(val)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="اختر موضع العنوان" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="top">أعلى الصفحة (تحت الترويسة)</SelectItem>
+                                <SelectItem value="center">وسط الصفحة (افتراضي)</SelectItem>
+                                <SelectItem value="bottom">أسفل وسط الصفحة</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* Decor Line Customization */}
+                        <div className="space-y-2 border-t pt-3">
+                          <div className="flex items-center justify-between">
+                            <Label className="font-medium">الخط الزخرفي تحت العنوان الرئيسي</Label>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">{showDecorLine ? "مفعّل" : "ملغى"}</span>
+                              <input
+                                type="checkbox"
+                                checked={showDecorLine}
+                                onChange={(e) => setShowDecorLine(e.target.checked)}
+                                className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                              />
+                            </div>
+                          </div>
+
+                          {showDecorLine && (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pl-2 border-l-2 border-slate-200 mt-2">
+                              <div className="space-y-1">
+                                <span className="text-xs text-muted-foreground block font-bold mb-1">عرض الخط (نقطة)</span>
+                                <input
+                                  type="range"
+                                  min="50"
+                                  max="400"
+                                  step="10"
+                                  value={decorLineWidth}
+                                  onChange={(e) => setDecorLineWidth(parseInt(e.target.value))}
+                                  className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                />
+                                <span className="text-xs text-muted-foreground block text-center font-medium">{decorLineWidth}pt</span>
+                              </div>
+
+                              <div className="space-y-1">
+                                <span className="text-xs text-muted-foreground block font-bold mb-1">سمك الخط (نقطة)</span>
+                                <input
+                                  type="range"
+                                  min="1"
+                                  max="10"
+                                  step="0.5"
+                                  value={decorLineHeight}
+                                  onChange={(e) => setDecorLineHeight(parseFloat(e.target.value))}
+                                  className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                />
+                                <span className="text-xs text-muted-foreground block text-center font-medium">{decorLineHeight}pt</span>
+                              </div>
+
+                              <div className="space-y-1.5">
+                                <span className="text-xs text-muted-foreground block font-bold mb-1">لون الخط الزخرفي</span>
+                                <div className="flex gap-1 items-center">
+                                  <Input
+                                    type="color"
+                                    className="w-8 h-8 p-0.5 cursor-pointer rounded-md border border-border"
+                                    value={decorLineColor}
+                                    onChange={(e) => setDecorLineColor(e.target.value)}
+                                  />
+                                  <Input
+                                    type="text"
+                                    className="h-8 text-xs font-mono"
+                                    value={decorLineColor}
+                                    onChange={(e) => setDecorLineColor(e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
                         {/* Page Border Color Picker */}
-                        <div className="space-y-1.5">
+                        <div className="space-y-1.5 border-t pt-3">
                           <Label>لون إطار الصفحات</Label>
                           <div className="flex gap-2 items-center">
                             <Input
@@ -1857,6 +2096,70 @@ export function NewProject() {
           </Button>
         </div>
       </form>
+
+      {previewTemplate && (
+        <Dialog open={!!previewTemplate} onOpenChange={(open) => { if (!open) setPreviewTemplate(null); }}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-right">معاينة تنسيق قالب: {previewTemplate.name}</DialogTitle>
+              <DialogDescription className="text-right">
+                {previewTemplate.description || "معاينة بصرية لتنسيق خطوط وهوامش وتوزيع محتوى الصفحة في هذا القالب."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4 border rounded-lg p-6 bg-slate-50 flex justify-center">
+              <div 
+                style={{
+                  width: "100%",
+                  maxWidth: "400px",
+                  aspectRatio: "1/1.414", // A4 ratio
+                  backgroundColor: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                  padding: `${(previewTemplate.formatting.marginTop || 2.5) * 12}px ${(previewTemplate.formatting.marginRight || 3) * 12}px ${(previewTemplate.formatting.marginBottom || 2.5) * 12}px ${(previewTemplate.formatting.marginLeft || 2.5) * 12}px`,
+                  fontFamily: previewTemplate.formatting.fontFamily || "Traditional Arabic",
+                  direction: "rtl",
+                  boxSizing: "border-box",
+                  overflow: "hidden",
+                }}
+                className="text-right select-none"
+              >
+                <div style={{ fontSize: `${(previewTemplate.formatting.headingSize || 18) * 0.8}px`, fontWeight: "bold", marginBottom: "12px", color: "#111827", lineHeight: 1.2 }}>
+                  1. عنوان القسم الرئيسي للبحث
+                </div>
+                <div style={{ fontSize: `${(previewTemplate.formatting.subheadingSize || 16) * 0.8}px`, fontWeight: "bold", marginBottom: "8px", color: "#374151", lineHeight: 1.2 }}>
+                  1.1 عنوان فرعي من المستوى الثاني
+                </div>
+                <div style={{ 
+                  fontSize: `${(previewTemplate.formatting.fontSize || 14) * 0.8}px`, 
+                  lineHeight: previewTemplate.formatting.lineSpacing || 1.5,
+                  textAlign: previewTemplate.formatting.paragraphAlign || "justify",
+                  textIndent: `${(previewTemplate.formatting.firstLineIndent || 1.25) * 8}px`,
+                  color: "#4b5563"
+                }}>
+                  هذا النص يمثل نموذجاً للمعاينة البصرية لطريقة عرض خطوط البحث وتباعد الأسطر المنسقة تلقائياً. عند اختيار هذا القالب، سيقوم النظام تلقائياً بتطبيق إعدادات الخط وحجم العناوين والمسافات البادئة والمارش الداخلي للهوامش في هذا البحث.
+                </div>
+                <div className="w-full h-px bg-slate-100 my-4" />
+                <div style={{ fontSize: `${(previewTemplate.formatting.fontSize || 14) * 0.8}px`, lineHeight: previewTemplate.formatting.lineSpacing || 1.5, color: "#4b5563" }}>
+                  • نقطة أولى لتوضيح شكل القوائم والتعداد النقطي.<br/>
+                  • نقطة ثانية تعكس شكل الهوامش الجانبية المطبقة على البحث.
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="mt-6 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setPreviewTemplate(null)}>إغلاق</Button>
+              <Button 
+                onClick={() => {
+                  applyFormattingTemplate(previewTemplate);
+                  setPreviewTemplate(null);
+                }}
+                className="bg-primary text-primary-foreground font-semibold"
+              >
+                تطبيق هذا التنسيق
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

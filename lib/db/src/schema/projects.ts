@@ -127,6 +127,20 @@ export type LayoutMetadata = {
   };
   isCustomTemplateCover?: boolean;
   coverTemplateId?: number;
+  detailsAlign?: "right" | "center" | "left";
+  headerLayout?: "logo-center" | "logo-right" | "logo-left";
+  detailsVertical?: "top" | "center" | "bottom";
+  titlePosition?: "top" | "center" | "bottom";
+  decorLineWidth?: number;
+  decorLineHeight?: number;
+  decorLineColor?: string;
+  showDecorLine?: boolean;
+  arabicHeader1?: string;
+  arabicHeader2?: string;
+  arabicHeader3?: string;
+  englishHeader1?: string;
+  englishHeader2?: string;
+  englishHeader3?: string;
 };
 
 export const projectsTable = pgTable("projects", {

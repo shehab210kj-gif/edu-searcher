@@ -374,7 +374,7 @@ export function Library() {
       {
         onSuccess: (p) => {
           toast({ title: "تم إنشاء نسخة من البحث للبدء في التعديل عليها" });
-          setLocation(`/projects/${p.id}`);
+          setLocation(`/projects/${p.id}?back=library`);
         },
         onError: () => {
           toast({ title: "عفواً، تعذر إعادة استخدام هذا البحث", variant: "destructive" });

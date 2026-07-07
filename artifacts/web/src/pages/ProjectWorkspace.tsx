@@ -85,6 +85,20 @@ export function ProjectWorkspace() {
   const [editEnglishHeader2, setEditEnglishHeader2] = useState("Ministry of Education");
   const [editEnglishHeader3, setEditEnglishHeader3] = useState("");
 
+  const [editDetailsVertical, setEditDetailsVertical] = useState<"top" | "center" | "bottom">("bottom");
+  const [editTitlePosition, setEditTitlePosition] = useState<"top" | "center" | "bottom">("center");
+  const [editDecorLineWidth, setEditDecorLineWidth] = useState<number>(200);
+  const [editDecorLineHeight, setEditDecorLineHeight] = useState<number>(3);
+  const [editDecorLineColor, setEditDecorLineColor] = useState<string>("#1a1a1a");
+  const [editShowDecorLine, setEditShowDecorLine] = useState<boolean>(true);
+
+  // Logo selection options
+  const [editLogoPreset, setEditLogoPreset] = useState("default");
+  const [editLogoUrl, setEditLogoUrl] = useState("");
+
+  const [fixingAll, setFixingAll] = useState(false);
+  const [fixingIndex, setFixingIndex] = useState<number | null>(null);
+
   const getCoverPageHtml = (
     style: string,
     title: string,
@@ -111,7 +125,13 @@ export function ProjectWorkspace() {
     arLine3?: string,
     enLine1?: string,
     enLine2?: string,
-    enLine3?: string
+    enLine3?: string,
+    detailsVertical?: string,
+    titlePosition?: string,
+    decorLineWidth?: number,
+    decorLineHeight?: number,
+    decorLineColor?: string,
+    showDecorLine?: boolean
   ) => {
     if (style.startsWith("template_")) {
       const templateId = parseInt(style.replace("template_", ""), 10);
@@ -256,12 +276,14 @@ export function ProjectWorkspace() {
 
     const alignClass = detailsAlign || "center"; // "right" | "left" | "center"
 
-    // Construct Columns Order based on headerLayout
+    // Construct Columns Content with faculty & department added in side columns
     let leftColumnContent = `
       <div style="text-align:left;direction:ltr;font-family:'Arial','Calibri',sans-serif;font-size:9.5pt;font-weight:700;color:${borderCol};line-height:1.8;flex:1;">
         ${enL1}<br/>
         ${enL2}<br/>
         ${enL3}
+        ${fac ? `<br/>Faculty of ${fac}` : ''}
+        ${dept ? `<br/>Department of ${dept}` : ''}
       </div>
     `;
     let centerColumnContent = `
@@ -274,8 +296,8 @@ export function ProjectWorkspace() {
         ${arL1}<br/>
         ${arL2}<br/>
         ${arL3}
-        ${fac ? `<br/>${fac}` : ''}
-        ${dept ? `<br/>${dept}` : ''}
+        ${fac ? `<br/>كلية ${fac}` : ''}
+        ${dept ? `<br/>قسم ${dept}` : ''}
       </div>
     `;
 
@@ -288,9 +310,9 @@ export function ProjectWorkspace() {
       centerColumnContent = `<div style="flex:1;"></div>`;
       leftColumnContent = `
         <div style="text-align:left;direction:ltr;font-family:'Arial','Calibri',sans-serif;font-size:9.5pt;font-weight:700;color:${borderCol};line-height:1.8;flex:1;">
-          ${enL1}<br/>${enL2}<br/>${enL3}
-          <div style="margin-top:10pt;text-align:left;direction:rtl;font-size:10pt;font-family:'Traditional Arabic',serif;">
-            ${arL1}<br/>${arL2}<br/>${arL3}${fac ? `<br/>${fac}` : ''}${dept ? `<br/>${dept}` : ''}
+          ${enL1}<br/>${enL2}<br/>${enL3}${fac ? `<br/>Faculty of ${fac}` : ''}${dept ? `<br/>Department of ${dept}` : ''}
+          <div style="margin-top:10pt;text-align:right;direction:rtl;font-size:10pt;font-family:'Traditional Arabic',serif;">
+            ${arL1}<br/>${arL2}<br/>${arL3}${fac ? `<br/>كلية ${fac}` : ''}${dept ? `<br/>قسم ${dept}` : ''}
           </div>
         </div>
       `;
@@ -303,38 +325,44 @@ export function ProjectWorkspace() {
       centerColumnContent = `<div style="flex:1;"></div>`;
       rightColumnContent = `
         <div style="text-align:right;direction:rtl;font-size:10pt;font-weight:700;color:${borderCol};line-height:1.8;flex:1;">
-          ${arL1}<br/>${arL2}<br/>${arL3}${fac ? `<br/>${fac}` : ''}${dept ? `<br/>${dept}` : ''}
-          <div style="margin-top:10pt;text-align:right;direction:ltr;font-size:9.5pt;font-family:'Arial','Calibri',sans-serif;">
-            ${enL1}<br/>${enL2}<br/>${enL3}
+          ${arL1}<br/>${arL2}<br/>${arL3}${fac ? `<br/>كلية ${fac}` : ''}${dept ? `<br/>قسم ${dept}` : ''}
+          <div style="margin-top:10pt;text-align:left;direction:ltr;font-size:9.5pt;font-family:'Arial','Calibri',sans-serif;">
+            ${enL1}<br/>${enL2}<br/>${enL3}${fac ? `<br/>Faculty of ${fac}` : ''}${dept ? `<br/>Department of ${dept}` : ''}
           </div>
         </div>
       `;
     }
 
-    return `
-<div style="font-family:'Traditional Arabic','Amiri','Times New Roman',serif;direction:rtl;width:100%;height:100%;background:#ffffff;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative;display:flex;flex-direction:column;box-sizing:border-box;">
-  <div style="${frameBorderOuter}"></div>
-  <div style="${frameBorderInner}"></div>
-  <div style="padding:24pt 24pt;display:flex;flex-direction:column;flex:1;justify-content:space-between;box-sizing:border-box;">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0;direction:ltr;width:100%;">
-      ${leftColumnContent}
-      ${centerColumnContent}
-      ${rightColumnContent}
-    </div>
-    <div style="height:1pt;background:#cccccc;margin:10pt 0;flex-shrink:0;"></div>
-    <div style="text-align:center;flex-shrink:0;margin-bottom:0;">
-      ${fac ? `<div style="font-size:11pt;color:#333;margin-bottom:3pt;">${fac}</div>` : ''}
-      ${dept ? `<div style="font-size:10pt;color:#555;margin-bottom:6pt;">${dept}</div>` : ''}
+    const dVertical = detailsVertical || "bottom"; // "top" | "center" | "bottom"
+    const tPosition = titlePosition || "center"; // "top" | "center" | "bottom"
+    const dLineWidth = decorLineWidth !== undefined ? decorLineWidth : 200;
+    const dLineHeight = decorLineHeight !== undefined ? decorLineHeight : 3;
+    const dLineColor = decorLineColor || "#1a1a1a";
+    const sDecorLine = showDecorLine !== false;
+
+    // Flex order mapping
+    let detailsOrder = 5;
+    if (dVertical === "top") detailsOrder = 1;
+    else if (dVertical === "center") detailsOrder = 3;
+
+    let titleOrder = 4;
+    if (tPosition === "top") titleOrder = 2;
+    else if (tPosition === "bottom") titleOrder = 6;
+
+    // Construct Blocks
+    const titleGroupBlock = `
+    <div style="text-align:center;order:${titleOrder};display:flex;flex-direction:column;align-items:center;justify-content:center;margin:8pt auto;max-width:400pt;width:100%;flex-shrink:0;">
       <h1 style="font-size:${Math.min(22, Math.max(16, Math.round(340 / Math.max(title.length, 8))))}pt;font-weight:800;color:#1a1a1a;line-height:1.5;margin:8pt auto 8pt;max-width:400pt;">${title}</h1>
-      <div style="width:200pt;height:3pt;background:#1a1a1a;margin:0 auto 12pt;"></div>
-    </div>
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:10pt 0;">
+      ${sDecorLine ? `<div style="width:${dLineWidth}pt;height:${dLineHeight}pt;background:${dLineColor};margin:12pt auto 12pt;"></div>` : ''}
       ${subtitle ? `<div style="font-size:12pt;color:#333;font-weight:600;margin-bottom:10pt;">${subtitle}</div>` : ''}
       ${cName ? `<div style="font-size:11pt;color:#555;margin-bottom:8pt;"><strong style="color:#111;">المقرر:</strong> ${cName}</div>` : ''}
       ${trainAgency ? `<div style="font-size:11pt;color:#555;margin-bottom:8pt;"><strong style="color:#111;">جهة التدريب:</strong> ${trainAgency}</div>` : ''}
       ${deg ? `<div style="display:inline-block;background:${borderCol};color:#fff;font-size:10pt;padding:4pt 24pt;border-radius:3pt;margin-top:6pt;margin-left:auto;margin-right:auto;">${deg}</div>` : ''}
     </div>
-    <div style="flex-shrink:0;text-align:${alignClass};padding-top:12pt;border-top:0.5pt solid #cccccc;">
+    `;
+
+    const detailsBlock = `
+    <div style="flex-shrink:0;text-align:${alignClass};padding-top:12pt;padding-bottom:12pt;border-top:${dVertical === "bottom" ? "0.5pt solid #cccccc" : "none"};border-bottom:${dVertical === "top" ? "0.5pt solid #cccccc" : "none"};order:${detailsOrder};width:100%;">
       <div style="font-size:11.5pt;line-height:2.0;color:#1a1a1a;">
         ${student ? `<div><strong style="color:#1a1a1a;">إعداد الطالب: </strong>${student}</div>` : ''}
         ${sId ? `<div><strong style="color:#1a1a1a;">الرقم الجامعي: </strong>${sId}</div>` : ''}
@@ -344,6 +372,21 @@ export function ProjectWorkspace() {
         ${year ? `<div style="font-size:11pt;color:#444;">${year}</div>` : ''}
       </div>
     </div>
+    `;
+
+    return `
+<div style="font-family:'Traditional Arabic','Amiri','Times New Roman',serif;direction:rtl;width:100%;height:100%;background:#ffffff;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative;display:flex;flex-direction:column;box-sizing:border-box;">
+  <div style="${frameBorderOuter}"></div>
+  <div style="${frameBorderInner}"></div>
+  <div style="padding:24pt 24pt;display:flex;flex-direction:column;flex:1;justify-content:space-between;box-sizing:border-box;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0;direction:ltr;width:100%;order:0;">
+      ${leftColumnContent}
+      ${centerColumnContent}
+      ${rightColumnContent}
+    </div>
+    <div style="height:1pt;background:#cccccc;margin:10pt 0;flex-shrink:0;order:0.5;"></div>
+    ${titleGroupBlock}
+    ${detailsBlock}
   </div>
 </div>`;
   };
@@ -380,6 +423,27 @@ export function ProjectWorkspace() {
     setEditEnglishHeader2((project.layoutMetadata as any)?.englishHeader2 || "Ministry of Education");
     setEditEnglishHeader3((project.layoutMetadata as any)?.englishHeader3 || "");
 
+    setEditDetailsVertical((project.layoutMetadata as any)?.detailsVertical || "bottom");
+    setEditTitlePosition((project.layoutMetadata as any)?.titlePosition || "center");
+    setEditDecorLineWidth((project.layoutMetadata as any)?.decorLineWidth !== undefined ? (project.layoutMetadata as any).decorLineWidth : 200);
+    setEditDecorLineHeight((project.layoutMetadata as any)?.decorLineHeight !== undefined ? (project.layoutMetadata as any).decorLineHeight : 3);
+    setEditDecorLineColor((project.layoutMetadata as any)?.decorLineColor || "#1a1a1a");
+    setEditShowDecorLine((project.layoutMetadata as any)?.showDecorLine !== false);
+
+    const logoUrl = cover.logoUrl || "";
+    setEditLogoUrl(logoUrl);
+    if (logoUrl.includes("D8%B4%D8%B9%D8%A7%D8%B1_%D8%AC%D8%A7%D9%85%D8%B9%D8%A9_%D8%A7%D9%84%D9%85%D9%84%D9%83_%D8%B3%D8%B9%D9%88%D8%AF")) {
+      setEditLogoPreset("ksu");
+    } else if (logoUrl.includes("D8%B4%D8%B9%D8%A7%D8%B1_%D8%AC%D8%A7%D9%85%D8%B9%D8%A9_%D8%A7%D9%84%D9%85%D9%84%D9%83_%D8%B9%D8%A8%D8%AF_%D8%A7%D9%84%D8%B9%D8%B2%D9%8A%D8%B2")) {
+      setEditLogoPreset("kau");
+    } else if (logoUrl.includes("Umm_Al-Qura_University_logo")) {
+      setEditLogoPreset("uqu");
+    } else if (logoUrl !== "") {
+      setEditLogoPreset("custom");
+    } else {
+      setEditLogoPreset("default");
+    }
+
     setEditModalOpen(true);
   };
 
@@ -387,6 +451,17 @@ export function ProjectWorkspace() {
     if (!project) return;
     const isCoverEnabled = editCoverStyle !== "none";
     
+    let finalLogoUrl = "";
+    if (editLogoPreset === "ksu") {
+      finalLogoUrl = "https://upload.wikimedia.org/wikipedia/ar/thumb/6/69/%D8%B4%D8%B9%D8%A7%D8%B1_%D8%AC%D8%A7%D9%85%D8%B9%D8%A9_%D8%A7%D9%84%D9%85%D9%84%D9%83_%D8%B3%D8%B9%D9%88%D8%AF.svg/250px-%D8%B4%D8%B9%D8%A7%D8%B1_%D8%AC%D8%A7%D9%85%D8%B9%D8%A9_%D8%A7%D9%84%D9%85%D9%84%D9%83_%D8%B3%D8%B9%D9%88%D8%AF.svg.png";
+    } else if (editLogoPreset === "kau") {
+      finalLogoUrl = "https://upload.wikimedia.org/wikipedia/ar/thumb/4/4a/%D8%B4%D8%B9%D8%A7%D8%B1_%D8%AC%D8%A7%D9%85%D8%B9%D8%A9_%D8%A7%D9%84%D9%85%D9%84%D9%83_%D8%B9%D8%A8%D8%AF_%D8%A7%D9%84%D8%B9%D8%B2%D9%8A%D8%B2.svg/120px-%D8%B4%D8%B9%D8%A7%D8%B1_%D8%AC%D8%A7%D9%85%D8%B9%D8%A9_%D8%A7%D9%84%D9%85%D9%84%D9%83_%D8%B9%D8%A8%D8%AF_%D8%A7%D9%84%D8%B9%D8%B2%D9%8A%D8%B2.svg.png";
+    } else if (editLogoPreset === "uqu") {
+      finalLogoUrl = "https://upload.wikimedia.org/wikipedia/ar/thumb/c/c3/Umm_Al-Qura_University_logo.png/250px-Umm_Al-Qura_University_logo.png";
+    } else if (editLogoPreset === "custom") {
+      finalLogoUrl = editLogoUrl;
+    }
+
     // Generate new cover HTML
     let coverHtml = "";
     if (isCoverEnabled) {
@@ -402,7 +477,7 @@ export function ProjectWorkspace() {
         editDepartment,
         editDegree,
         editAcademicYear,
-        "", // logoUrl is computed on backend or omitted for custom logoUrl
+        finalLogoUrl,
         editBorderColor,
         editStudentId,
         editSection,
@@ -416,7 +491,13 @@ export function ProjectWorkspace() {
         editArabicHeader3,
         editEnglishHeader1,
         editEnglishHeader2,
-        editEnglishHeader3
+        editEnglishHeader3,
+        editDetailsVertical,
+        editTitlePosition,
+        editDecorLineWidth,
+        editDecorLineHeight,
+        editDecorLineColor,
+        editShowDecorLine
       );
     }
 
@@ -432,6 +513,12 @@ export function ProjectWorkspace() {
       englishHeader1: editEnglishHeader1,
       englishHeader2: editEnglishHeader2,
       englishHeader3: editEnglishHeader3,
+      detailsVertical: editDetailsVertical,
+      titlePosition: editTitlePosition,
+      decorLineWidth: editDecorLineWidth,
+      decorLineHeight: editDecorLineHeight,
+      decorLineColor: editDecorLineColor,
+      showDecorLine: editShowDecorLine,
       coverPageHtml: isCoverEnabled ? coverHtml : undefined,
       cover: isCoverEnabled ? {
         title: editTitle,
@@ -447,6 +534,7 @@ export function ProjectWorkspace() {
         studentId: editStudentId,
         section: editSection,
         fieldSupervisor: editFieldSupervisor,
+        logoUrl: finalLogoUrl,
       } : undefined,
       isCustomTemplateCover: editCoverStyle.startsWith("template_"),
       coverTemplateId: editCoverStyle.startsWith("template_") ? parseInt(editCoverStyle.replace("template_", ""), 10) : undefined,
@@ -482,6 +570,44 @@ export function ProjectWorkspace() {
         description: err.response?.data?.error || "حدث خطأ أثناء الاتصال بالخادم.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleAutoFix = async (issueIndex?: number, fixAll: boolean = false) => {
+    if (fixAll) {
+      setFixingAll(true);
+    } else if (issueIndex !== undefined) {
+      setFixingIndex(issueIndex);
+    }
+
+    try {
+      const response = await fetch(`/api/projects/${id}/auto-fix`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ issueIndex, fixAll }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to auto fix");
+      }
+
+      toast({
+        title: fixAll ? "تم إصلاح كافة الملاحظات بنجاح" : "تم إصلاح المشكلة بنجاح",
+        description: fixAll ? "وصلت الجاهزية إلى 100% وتم تحديث البحث بالكامل." : "تم تعديل القسم وحل المشكلة تلقائياً.",
+      });
+
+      // Refetch project data to show changes
+      queryClient.invalidateQueries({ queryKey: getGetProjectQueryKey(id) });
+      setPreviewReloadKey(prev => prev + 1);
+    } catch (err: any) {
+      toast({
+        title: "فشل الإصلاح التلقائي",
+        description: "حدث خطأ غير متوقع أثناء محاولة إصلاح الأخطاء.",
+        variant: "destructive",
+      });
+    } finally {
+      setFixingAll(false);
+      setFixingIndex(null);
     }
   };
 
@@ -650,14 +776,25 @@ export function ProjectWorkspace() {
     return <TemplateWorkspace project={project} />;
   }
 
+  const searchParams = new URLSearchParams(window.location.search);
+  const backParam = searchParams.get("back");
+
   return (
     <div className="space-y-6 fade-in-up pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-            <Link href="/" className="hover:text-foreground">لوحة التحكم</Link>
-            <span>/</span>
-            <span>المشاريع</span>
+            {backParam === "library" ? (
+              <Link href="/library" className="flex items-center gap-1 hover:text-foreground text-indigo-600 font-semibold">
+                <span>← العودة للمكتبة البحثية</span>
+              </Link>
+            ) : (
+              <>
+                <Link href="/" className="hover:text-foreground">لوحة التحكم</Link>
+                <span>/</span>
+                <span>المشاريع</span>
+              </>
+            )}
             <span>/</span>
             <span className="text-foreground font-medium truncate max-w-[200px]">{project.title}</span>
           </div>
@@ -1034,28 +1171,53 @@ export function ProjectWorkspace() {
                         </div>
                       </div>
 
-                      <h3 className="font-bold mb-4">الملاحظات والمشاكل المكتشفة ({project.verification.issues.length})</h3>
+                      <div className="flex items-center justify-between mb-4 border-b pb-3">
+                        <h3 className="font-bold text-slate-800">الملاحظات والمشاكل المكتشفة ({project.verification.issues.length})</h3>
+                        {project.verification.issues.length > 0 && (
+                          <Button 
+                            onClick={() => handleAutoFix(undefined, true)}
+                            disabled={fixingAll || fixingIndex !== null}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5"
+                          >
+                            {fixingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                            إصلاح كافة المشاكل والوصول لـ 100%
+                          </Button>
+                        )}
+                      </div>
+                      
                       <div className="space-y-3">
                         {project.verification.issues.map((issue, i) => (
-                          <div key={i} className={`p-4 rounded-lg border flex gap-4 ${issue.severity === 'high' ? 'bg-red-50/50 border-red-200' : issue.severity === 'medium' ? 'bg-amber-50/50 border-amber-200' : 'bg-blue-50/50 border-blue-200'}`}>
-                            <div className="shrink-0 mt-0.5">
-                              {issue.severity === 'high' ? <AlertTriangle className="w-5 h-5 text-red-500" /> : <AlertTriangle className="w-5 h-5 text-amber-500" />}
+                          <div key={i} className={`p-4 rounded-lg border flex gap-4 justify-between items-start ${issue.severity === 'high' ? 'bg-red-50/50 border-red-200' : issue.severity === 'medium' ? 'bg-amber-50/50 border-amber-200' : 'bg-blue-50/50 border-blue-200'}`}>
+                            <div className="flex gap-4">
+                              <div className="shrink-0 mt-0.5">
+                                {issue.severity === 'high' ? <AlertTriangle className="w-5 h-5 text-red-500" /> : <AlertTriangle className="w-5 h-5 text-amber-500" />}
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-sm mb-1">{issue.type}</h4>
+                                <p className="text-sm text-muted-foreground mb-2">{issue.message}</p>
+                                {issue.suggestion && (
+                                  <div className="text-sm bg-background p-2 rounded border mt-2">
+                                    <span className="font-semibold text-primary">اقتراح: </span>
+                                    {issue.suggestion}
+                                  </div>
+                                )}
+                                {issue.location && (
+                                  <div className="text-xs text-muted-foreground mt-2">
+                                    📍 الموقع: {issue.location}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <div>
-                              <h4 className="font-bold text-sm mb-1">{issue.type}</h4>
-                              <p className="text-sm text-muted-foreground mb-2">{issue.message}</p>
-                              {issue.suggestion && (
-                                <div className="text-sm bg-background p-2 rounded border mt-2">
-                                  <span className="font-semibold text-primary">اقتراح: </span>
-                                  {issue.suggestion}
-                                </div>
-                              )}
-                              {issue.location && (
-                                <div className="text-xs text-muted-foreground mt-2">
-                                  📍 الموقع: {issue.location}
-                                </div>
-                              )}
-                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleAutoFix(i, false)}
+                              disabled={fixingAll || fixingIndex !== null}
+                              className="bg-white hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 font-semibold gap-1 shrink-0"
+                            >
+                              {fixingIndex === i ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                              إصلاح تلقائي
+                            </Button>
                           </div>
                         ))}
                       </div>
@@ -1186,6 +1348,35 @@ export function ProjectWorkspace() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Logo Preset */}
+                <div className="space-y-1.5">
+                  <Label>شعار الجامعة</Label>
+                  <Select value={editLogoPreset} onValueChange={setEditLogoPreset}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر شعار الجامعة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">بدون شعار (Default)</SelectItem>
+                      <SelectItem value="ksu">جامعة الملك سعود (KSU)</SelectItem>
+                      <SelectItem value="kau">جامعة الملك عبدالعزيز (KAU)</SelectItem>
+                      <SelectItem value="uqu">جامعة أم القرى (UQU)</SelectItem>
+                      <SelectItem value="custom">رابط شعار مخصص (Custom Logo URL)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Custom Logo URL */}
+                {editLogoPreset === "custom" && (
+                  <div className="space-y-1.5">
+                    <Label>رابط الشعار المخصص (Logo Image URL)</Label>
+                    <Input
+                      placeholder="أدخل رابط صورة الشعار (https://...)"
+                      value={editLogoUrl}
+                      onChange={(e) => setEditLogoUrl(e.target.value)}
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-1.5">
                   <Label>عنوان الغلاف الفرعي (اختياري)</Label>
@@ -1394,7 +1585,104 @@ export function ProjectWorkspace() {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
+                {/* Custom Layout Position Controls */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-3">
+                  <div className="space-y-1.5">
+                    <Label>موضع بيانات الطالب والمشرف رأسيّاً</Label>
+                    <Select value={editDetailsVertical} onValueChange={(val: any) => setEditDetailsVertical(val)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر الموضع الرأسي" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="top">أعلى الصفحة (تحت الترويسة)</SelectItem>
+                        <SelectItem value="center">وسط الصفحة</SelectItem>
+                        <SelectItem value="bottom">أسفل الصفحة (افتراضي)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>موضع العنوان الرئيسي للبحث</Label>
+                    <Select value={editTitlePosition} onValueChange={(val: any) => setEditTitlePosition(val)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر موضع العنوان" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="top">أعلى الصفحة (تحت الترويسة)</SelectItem>
+                        <SelectItem value="center">وسط الصفحة (افتراضي)</SelectItem>
+                        <SelectItem value="bottom">أسفل وسط الصفحة</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Decor Line Customization */}
+                <div className="space-y-2 border-t pt-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-medium">الخط الزخرفي تحت العنوان الرئيسي</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{editShowDecorLine ? "مفعّل" : "ملغى"}</span>
+                      <input
+                        type="checkbox"
+                        checked={editShowDecorLine}
+                        onChange={(e) => setEditShowDecorLine(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+
+                  {editShowDecorLine && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pl-2 border-l-2 border-slate-200 mt-2">
+                      <div className="space-y-1">
+                        <span className="text-xs text-muted-foreground block font-bold mb-1">عرض الخط (نقطة)</span>
+                        <input
+                          type="range"
+                          min="50"
+                          max="400"
+                          step="10"
+                          value={editDecorLineWidth}
+                          onChange={(e) => setEditDecorLineWidth(parseInt(e.target.value))}
+                          className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <span className="text-xs text-muted-foreground block text-center font-medium">{editDecorLineWidth}pt</span>
+                      </div>
+
+                      <div className="space-y-1">
+                        <span className="text-xs text-muted-foreground block font-bold mb-1">سمك الخط (نقطة)</span>
+                        <input
+                          type="range"
+                          min="1"
+                          max="10"
+                          step="0.5"
+                          value={editDecorLineHeight}
+                          onChange={(e) => setEditDecorLineHeight(parseFloat(e.target.value))}
+                          className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <span className="text-xs text-muted-foreground block text-center font-medium">{editDecorLineHeight}pt</span>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <span className="text-xs text-muted-foreground block font-bold mb-1">لون الخط الزخرفي</span>
+                        <div className="flex gap-1 items-center">
+                          <Input
+                            type="color"
+                            className="w-8 h-8 p-0.5 cursor-pointer rounded-md border border-border"
+                            value={editDecorLineColor}
+                            onChange={(e) => setEditDecorLineColor(e.target.value)}
+                          />
+                          <Input
+                            type="text"
+                            className="h-8 text-xs font-mono"
+                            value={editDecorLineColor}
+                            onChange={(e) => setEditDecorLineColor(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1.5 border-t pt-3">
                   <Label>لون إطار الصفحة</Label>
                   <div className="flex gap-2 items-center">
                     <Input
