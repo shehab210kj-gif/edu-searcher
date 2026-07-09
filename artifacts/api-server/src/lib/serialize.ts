@@ -73,7 +73,7 @@ export function serializeLibraryDocumentSummary(d: LibraryDocument) {
     fileType: d.fileType,
     pageCount: d.pageCount ?? null,
     status: d.status,
-    richContent: d.richContent,
+    richContent: d.documentType === "master_template" ? d.richContent : undefined,
     createdAt: d.createdAt.toISOString(),
     updatedAt: d.updatedAt.toISOString(),
   };
