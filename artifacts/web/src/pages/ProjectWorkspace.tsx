@@ -567,7 +567,7 @@ export function ProjectWorkspace() {
     } catch (err: any) {
       toast({
         title: "تعذّر الحفظ بالمكتبة",
-        description: err.response?.data?.error || "حدث خطأ أثناء الاتصال بالخادم.",
+        description: err.data?.error || err.message || "حدث خطأ أثناء الاتصال بالخادم.",
         variant: "destructive",
       });
     }

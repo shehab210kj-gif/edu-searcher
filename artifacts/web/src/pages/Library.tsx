@@ -334,7 +334,7 @@ export function Library() {
     } catch (err: any) {
       toast({
         title: "تعذّر رفع الملف",
-        description: err.response?.data?.error || "الرجاء التحقق من صيغة الملف وحجمه.",
+        description: err.data?.error || err.message || "الرجاء التحقق من صيغة الملف وحجمه.",
         variant: "destructive",
       });
     }
@@ -362,7 +362,7 @@ export function Library() {
     } catch (err: any) {
       toast({
         title: "فشل البحث الذكي والمطابقة",
-        description: err.response?.data?.error || "حدث خطأ أثناء الاتصال بالخادم المساعد.",
+        description: err.data?.error || err.message || "حدث خطأ أثناء الاتصال بالخادم المساعد.",
         variant: "destructive",
       });
     }
