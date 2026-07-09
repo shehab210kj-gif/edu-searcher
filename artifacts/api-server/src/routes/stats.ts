@@ -1,46 +1,65 @@
 import { Router, type IRouter } from "express";
 import { desc, sql } from "drizzle-orm";
 import { db, projectsTable } from "@workspace/db";
-import { serializeProjectSummary } from "../lib/serialize";
 
 const router: IRouter = Router();
 
 router.get("/stats", async (_req, res): Promise<void> => {
-  const all = await db.select().from(projectsTable);
+  // Use SQL aggregations instead of loading all projects into memory
+  const [counts] = await db
+    .select({
+      totalProjects: sql<number>`count(*)::int`,
+      avgReadiness: sql<number>`coalesce(round(avg(${projectsTable.readinessScore}) filter (where ${projectsTable.readinessScore} is not null))::int, 0)`,
+      completedProjects: sql<number>`count(*) filter (where ${projectsTable.readinessScore} >= 80)::int`,
+    })
+    .from(projectsTable);
 
-  const totalProjects = all.length;
-  const scored = all.filter((p) => p.readinessScore != null);
-  const avgReadiness =
-    scored.length > 0
-      ? Math.round(
-          scored.reduce((sum, p) => sum + (p.readinessScore ?? 0), 0) /
-            scored.length,
-        )
-      : 0;
-  const completedProjects = all.filter(
-    (p) => (p.readinessScore ?? 0) >= 80,
-  ).length;
+  const byWorkTypeRows = await db
+    .select({
+      workType: projectsTable.workType,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(projectsTable)
+    .groupBy(projectsTable.workType);
 
-  const byWorkTypeMap = new Map<string, number>();
-  for (const p of all) {
-    byWorkTypeMap.set(p.workType, (byWorkTypeMap.get(p.workType) ?? 0) + 1);
-  }
-  const byWorkType = Array.from(byWorkTypeMap.entries()).map(
-    ([workType, count]) => ({ workType, count }),
-  );
+  const byWorkType = byWorkTypeRows.map((r) => ({
+    workType: r.workType,
+    count: r.count,
+  }));
 
+  // Only select lightweight summary columns for recent projects
   const recent = await db
-    .select()
+    .select({
+      id: projectsTable.id,
+      title: projectsTable.title,
+      workType: projectsTable.workType,
+      citationStyle: projectsTable.citationStyle,
+      language: projectsTable.language,
+      readinessScore: projectsTable.readinessScore,
+      createdAt: projectsTable.createdAt,
+      updatedAt: projectsTable.updatedAt,
+    })
     .from(projectsTable)
     .orderBy(desc(projectsTable.updatedAt))
     .limit(5);
 
+  const recentProjects = recent.map((p) => ({
+    id: p.id,
+    title: p.title,
+    workType: p.workType,
+    citationStyle: p.citationStyle,
+    language: p.language,
+    readinessScore: p.readinessScore,
+    createdAt: p.createdAt.toISOString(),
+    updatedAt: p.updatedAt.toISOString(),
+  }));
+
   res.json({
-    totalProjects,
-    avgReadiness,
-    completedProjects,
+    totalProjects: counts.totalProjects,
+    avgReadiness: counts.avgReadiness,
+    completedProjects: counts.completedProjects,
     byWorkType,
-    recentProjects: recent.map(serializeProjectSummary),
+    recentProjects,
   });
 });
 

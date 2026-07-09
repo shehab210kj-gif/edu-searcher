@@ -15,10 +15,28 @@ const router: IRouter = Router();
 
 router.get("/projects", async (_req, res): Promise<void> => {
   const rows = await db
-    .select()
+    .select({
+      id: projectsTable.id,
+      title: projectsTable.title,
+      workType: projectsTable.workType,
+      citationStyle: projectsTable.citationStyle,
+      language: projectsTable.language,
+      readinessScore: projectsTable.readinessScore,
+      createdAt: projectsTable.createdAt,
+      updatedAt: projectsTable.updatedAt,
+    })
     .from(projectsTable)
     .orderBy(desc(projectsTable.updatedAt));
-  res.json(rows.map(serializeProjectSummary));
+  res.json(rows.map((p) => ({
+    id: p.id,
+    title: p.title,
+    workType: p.workType,
+    citationStyle: p.citationStyle,
+    language: p.language,
+    readinessScore: p.readinessScore,
+    createdAt: p.createdAt.toISOString(),
+    updatedAt: p.updatedAt.toISOString(),
+  })));
 });
 
 router.post("/projects", async (req, res): Promise<void> => {
