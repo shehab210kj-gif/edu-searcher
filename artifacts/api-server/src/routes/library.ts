@@ -86,8 +86,31 @@ router.get("/library", async (req, res): Promise<void> => {
     .from(libraryDocumentsTable)
     .where(where);
 
+  const selectFields: any = {
+    id: libraryDocumentsTable.id,
+    title: libraryDocumentsTable.title,
+    description: libraryDocumentsTable.description,
+    documentType: libraryDocumentsTable.documentType,
+    coverImageUrl: libraryDocumentsTable.coverImageUrl,
+    university: libraryDocumentsTable.university,
+    degreeLevel: libraryDocumentsTable.degreeLevel,
+    department: libraryDocumentsTable.department,
+    category: libraryDocumentsTable.category,
+    language: libraryDocumentsTable.language,
+    tags: libraryDocumentsTable.tags,
+    fileType: libraryDocumentsTable.fileType,
+    pageCount: libraryDocumentsTable.pageCount,
+    status: libraryDocumentsTable.status,
+    createdAt: libraryDocumentsTable.createdAt,
+    updatedAt: libraryDocumentsTable.updatedAt,
+  };
+
+  if (q.documentType === "master_template") {
+    selectFields.richContent = libraryDocumentsTable.richContent;
+  }
+
   const rows = await db
-    .select()
+    .select(selectFields)
     .from(libraryDocumentsTable)
     .where(where)
     .orderBy(desc(libraryDocumentsTable.updatedAt))
