@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs";
-import puppeteer, { Browser, Page } from "puppeteer";
+import type { Browser, Page } from "puppeteer";
 import HTMLtoDOCX from "@turbodocx/html-to-docx";
 import type { Formatting, LayoutMetadata } from "@workspace/db";
 import { downloadObjectToBuffer } from "./storage";
@@ -449,7 +449,8 @@ class BrowserManager {
     const executablePath = resolveChromium();
     this.isLaunching = true;
     try {
-      this.instance = await puppeteer.launch({
+      const pptr = await import("puppeteer");
+      this.instance = await pptr.default.launch({
         ...(executablePath ? { executablePath } : {}),
         headless: true,
         args: [

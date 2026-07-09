@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs";
-import puppeteer from "puppeteer";
+// puppeteer is loaded lazily via dynamic import() to save memory at startup
 import type { Project, Formatting } from "@workspace/db";
 import {
   buildFormattedDocument,
@@ -190,7 +190,8 @@ export async function buildPdf(project: Project): Promise<Buffer> {
   const f = formatted.formatting;
   const html = buildHtml(formatted.blocks, f);
 
-  const browser = await puppeteer.launch({
+  const pptr = await import("puppeteer");
+  const browser = await pptr.default.launch({
     executablePath: resolveChromium(),
     headless: true,
     args: [
