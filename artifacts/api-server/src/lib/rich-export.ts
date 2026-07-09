@@ -421,8 +421,14 @@ function printTemplate(
 class BrowserManager {
   private static instance: Browser | null = null;
   private static isLaunching = false;
+  private static closeTimer: NodeJS.Timeout | null = null;
 
   public static async getBrowser(): Promise<Browser> {
+    if (this.closeTimer) {
+      clearTimeout(this.closeTimer);
+      this.closeTimer = null;
+    }
+
     if (this.instance) {
       try {
         await this.instance.target();
@@ -470,6 +476,17 @@ class BrowserManager {
       } catch {}
       this.instance = null;
     }
+  }
+
+  public static resetCloseTimer(): void {
+    if (this.closeTimer) {
+      clearTimeout(this.closeTimer);
+      this.closeTimer = null;
+    }
+    this.closeTimer = setTimeout(async () => {
+      console.log("BrowserManager: Closing idle browser to release memory...");
+      await this.closeBrowser();
+    }, 20000); // Release browser from memory after 20 seconds of inactivity
   }
 }
 
@@ -724,6 +741,7 @@ ${content}
     return Buffer.from(pdf);
   } finally {
     await page.close();
+    BrowserManager.resetCloseTimer();
   }
 }
 
